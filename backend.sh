@@ -7,6 +7,49 @@
 
 set -e
 
+# Deploy MongoDB (PVC + deployment + service)
+deploy_mongo() {
+  echo "🗄️ Deploying MongoDB..."
+  if ! kubectl get deployment mongo -n ${KUBE_NAMESPACE} &> /dev/null; then
+    # Deploy PVC cho MongoDB nếu chưa có
+    if ! kubectl get pvc mongo-pvc -n ${KUBE_NAMESPACE} &> /dev/null; then
+      echo "📦 Creating PVC mongo-pvc..."
+      kubectl apply -f kube/mongo-pvc.yaml -n ${KUBE_NAMESPACE}
+    else
+      echo "📦 PVC mongo-pvc already exists."
+    fi
+    kubectl apply -f kube/mongo-deployment.yaml -n ${KUBE_NAMESPACE}
+    echo "⏳ Waiting for MongoDB to be ready..."
+    kubectl rollout status deployment/mongo -n ${KUBE_NAMESPACE} --timeout=120s
+  else
+    echo "🗄️ MongoDB already deployed."
+  fi
+}
+
+# Deploy CouchDB offchain (PVC + deployment + service)
+deploy_couchdb_offchain() {
+  echo "🗄️ Deploying CouchDB offchain..."
+  if ! kubectl get deployment couchdb-offchain -n ${KUBE_NAMESPACE} &> /dev/null; then
+    if ! kubectl get pvc couchdb-offchain-pvc -n ${KUBE_NAMESPACE} &> /dev/null; then
+      echo "📦 Creating PVC couchdb-offchain-pvc..."
+      kubectl apply -f kube/couchdb-offchain-pvc.yaml -n ${KUBE_NAMESPACE}
+    else
+      echo "📦 PVC couchdb-offchain-pvc already exists."
+    fi
+    kubectl apply -f kube/couchdb-offchain.yaml -n ${KUBE_NAMESPACE}
+    echo "⏳ Waiting for CouchDB offchain to be ready..."
+    kubectl rollout status deployment/couchdb-offchain -n ${KUBE_NAMESPACE} --timeout=120s
+
+    sleep 3
+
+    kubectl exec -n ${KUBE_NAMESPACE} deploy/couchdb-offchain --   curl -X PUT http://admin:adminpw@localhost:5984/mychannel
+    echo "CouchDB Offchain deployed."
+  else
+    echo "🗄️ CouchDB offchain already deployed."
+  fi
+}
+
+
 # Deploy backend pod, service, ingress
 deploy_backend() {
   echo "🚀 Deploying backend to namespace ${KUBE_NAMESPACE}..."
@@ -17,6 +60,9 @@ deploy_backend() {
     kubectl create namespace ${KUBE_NAMESPACE}
   fi
 
+  # Deploy CouchDB offchain trước
+  deploy_couchdb_offchain
+
   # Deploy PVC fabric-wallet (if not exist)
   if ! kubectl get pvc fabric-wallet -n ${KUBE_NAMESPACE} &> /dev/null; then
     echo "📦 Creating PVC fabric-wallet..."
@@ -24,6 +70,9 @@ deploy_backend() {
   else
     echo "📦 PVC fabric-wallet already exists."
   fi
+
+  # Deploy MongoDB first
+  deploy_mongo
 
   # Build Docker image
   echo "🔨 Building backend Docker image..."
@@ -55,7 +104,7 @@ deploy_backend() {
   kubectl get pods -n ${KUBE_NAMESPACE} -l app=backend
   kubectl get svc -n ${KUBE_NAMESPACE} -l app=backend
   kubectl get ingress -n ${KUBE_NAMESPACE} -l app=backend
-
+  
   echo ""
   echo "🌍 Access the backend at: https://backend.${DOMAIN}/health"
   echo "🔁 Example curl:"
@@ -64,6 +113,10 @@ deploy_backend() {
 
 # Clean up backend resources
 clean_backend() {
+
+  echo "🧹 Cleaning all identities from wallet (PVC fabric-wallet)..."
+  kubectl -n ${KUBE_NAMESPACE} exec deploy/backend -- sh -c 'rm -rf /fabric/application/wallet/*'
+
   echo "🧹 Cleaning backend deployment, services, ingress..."
 
   kubectl delete deployment backend -n ${KUBE_NAMESPACE} --ignore-not-found
@@ -76,9 +129,33 @@ clean_backend() {
   kubectl wait --for=delete ingress/backend-ingress -n ${KUBE_NAMESPACE} --timeout=30s || true
   kubectl delete pvc fabric-wallet -n ${KUBE_NAMESPACE} --ignore-not-found
 
+  # Clean MongoDB resources
+  echo "🧹 Cleaning MongoDB deployment and service..."
+  kubectl delete deployment mongo -n ${KUBE_NAMESPACE} --ignore-not-found
+  kubectl delete svc mongo -n ${KUBE_NAMESPACE} --ignore-not-found
+  kubectl delete pvc mongo-pvc -n ${KUBE_NAMESPACE} --ignore-not-found
+  echo "⏳ Waiting for MongoDB resources to be terminated..."
+  kubectl wait --for=delete pod -l app=mongo -n ${KUBE_NAMESPACE} --timeout=60s || true
+  kubectl wait --for=delete svc/mongo -n ${KUBE_NAMESPACE} --timeout=30s || true
+  kubectl wait --for=delete pvc/mongo-pvc -n ${KUBE_NAMESPACE} --timeout=30s || true
+
+  # Clean CouchDB offchain resources
+  clean_couchdb_offchain
+
   echo "🗑 Removing local Docker images..."
   ${CONTAINER_CLI} rmi ${CONTROL_PLANE_IP}:${LOCAL_REGISTRY_PORT}/test-network-backend:latest || true
   ${CONTAINER_CLI} rmi test-network-backend:latest || true
 
   echo "✅ Backend cleanup completed!"
+}
+
+clean_couchdb_offchain() {
+  echo "🧹 Cleaning CouchDB offchain deployment and service..."
+  kubectl delete deployment couchdb-offchain -n ${KUBE_NAMESPACE} --ignore-not-found
+  kubectl delete svc couchdb-offchain -n ${KUBE_NAMESPACE} --ignore-not-found
+  kubectl delete pvc couchdb-offchain-pvc -n ${KUBE_NAMESPACE} --ignore-not-found
+  echo "⏳ Waiting for CouchDB offchain resources to be terminated..."
+  kubectl wait --for=delete pod -l app=couchdb-offchain -n ${KUBE_NAMESPACE} --timeout=60s || true
+  kubectl wait --for=delete svc/couchdb-offchain -n ${KUBE_NAMESPACE} --timeout=30s || true
+  kubectl wait --for=delete pvc/couchdb-offchain-pvc -n ${KUBE_NAMESPACE} --timeout=30s || true
 }

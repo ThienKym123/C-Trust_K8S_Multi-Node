@@ -206,6 +206,12 @@ function cleanup_storage_volumes() {
 # Tear down the Fabric network
 function network_down() {
   set +e
+  
+  docker images --format '{{.Repository}} {{.Tag}} {{.ID}}' \
+| grep -E 'supplychain|<none>' \
+| awk '{print $3}' | sort | uniq \
+| xargs -r docker rmi -f
+
   for ns in $ORG0_NS $ORG1_NS $ORG2_NS; do
     kubectl get namespace $ns >/dev/null 2>&1
     if [[ $? -ne 0 ]]; then

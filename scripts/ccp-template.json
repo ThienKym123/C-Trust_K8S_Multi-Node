@@ -36,7 +36,7 @@
     },
     "certificateAuthorities": {
         "org${ORG}-ca": {
-            "url": "https://org${ORG}-ca.${NS}.svc.cluster.local:443",
+            "url": "https://org${ORG}-ca:443",
             "caName": "org${ORG}-ca",
             "tlsCACerts": {
                 "pem": ["${CAPEM}"]

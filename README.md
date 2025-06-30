@@ -52,16 +52,22 @@ Launch the network, create a channel, and deploy the [basic-asset-transfer](../a
 
 ./start.sh chaincode deploy asset-transfer-basic ../asset-transfer-basic/chaincode-go/
 
+./start.sh chaincode deploy supplychain-cc ./chaincode-go/
+
 ./start.sh application
 ```
 
 Launch backend:
 ```shell
 ./start.sh backend
+
 ```
 
-Test API:
+Test API khi deploy chaincode "asset-transfer-basic":
 https://.postman.co/workspace/My-Workspace~a44268f6-ecbd-4424-8a5f-2a9ad6206e40/collection/37567808-5821b3ec-a62e-4953-8612-74db15889cfc?action=share&creator=37567808
+
+Test API khi deploy chaincode "supplychain-cc":
+https://www.postman.com/research-administrator-81537314/workspace/c-trust/collection/37567808-6b97fada-a115-40f5-95eb-5870711fcc52?action=share&creator=37567808
 
 Clean backend:
 ```shell
