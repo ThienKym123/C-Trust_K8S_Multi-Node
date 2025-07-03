@@ -1,0 +1,532 @@
+<html>
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Truy xuất nguồn gốc thông tin sản phẩm</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css"
+        integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"
+        integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN"
+        crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"
+        integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q"
+        crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"
+        integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl"
+        crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.6.3/css/all.css"
+        integrity="sha384-UHRtZLI+pbxtHCWp1t77Bi1L4ZtiqrqD80Kn4Z8NTSRyMA2Fd33n5dQ8lWUE00s/" crossorigin="anonymous">
+
+    <link rel="stylesheet" href="/css/style.css">
+    <!-- Core CSS file -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/photoswipe/4.1.1/photoswipe.min.css">
+
+    <!-- Skin CSS file (styling of UI - buttons, caption, etc.)
+         In the folder of skin CSS file there are also:
+         - .png and .svg icons sprite, 
+         - preloader.gif (for browsers that do not support CSS animations) -->
+    <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/photoswipe/4.1.1/default-skin/default-skin.min.css">
+
+    <!-- Core JS file -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/photoswipe/4.1.1/photoswipe.min.js"></script>
+
+    <!-- UI JS file -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/photoswipe/4.1.1/photoswipe-ui-default.min.js"></script>
+    <!--[if lt IE 9]>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/html5shiv/3.7.2/html5shiv.min.js"></script>
+    <![endif]-->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.14.0/css/all.min.css"
+        integrity="sha512-1PKOgIY59xJ8Co8+NE6FZ+LOAZKjy+KY8iq0G4B3CyeY6wYHN3yt9PW0XpSriVlkMXe40PTKnXrLnZ9+fkDaog=="
+        crossorigin="anonymous" />
+</head>
+
+<body>
+    <h2 class="navbar-brand brand-name text-center" >
+        <a href="index.html"><img class="img-responsive2"       
+        src="/images/logo.png" style="max-width: 30%;"></a>
+    </h2>
+    <style>
+        .navbar {
+margin: 10px 0;
+
+}
+.navbar-default {
+background-color: #fff;
+border-color: #fff;
+}
+.brand-name {
+font-family: 'Josefin Slab', serif;
+font-size: 47px;
+font-weight: bold;
+color: #444;
+text-decoration: none;
+}
+
+.nav-container {
+padding-top: 8px;
+}
+
+.navbar-custom {
+font-size: 20px;
+background-color: #FFF;
+
+}
+    </style>
+    <h1 class="text-center"> Truy xuất nguồn gốc sản phẩm</h1>
+    <div class="container">
+        <div class="row text-center">
+            <div class="col-md-12">
+                <h1 class="black ten-san-pham">
+                    <button type="button" class="btn btn-primary btn-lg "><%= data[0]["Value"]["TenSanPham"] %></button>
+                </h1>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="main-timeline">
+                    <% for( let i = 0; i < data.length; i++ ) { %>
+
+                    <div class="timeline" id="timeline<%- i %> ">
+                        <div class="timeline-icon"></div>
+                        <% if (i%2) { %>
+                        <div class="timeline-content right">
+                            <% } else { %>
+                            <div class="timeline-content ">
+                                <% } %>
+                                <h4 class="title ">Cập nhật lúc:
+                                    <%= moment(data[i]["Value"]["ThoiGian"], 'DD/MM/YYYY').locale('vi').format("h:mm:ss A, Do MMMM  YYYY ")%>
+                                </h4>
+                                <div class="owner-product col-12 text-left">
+                                    <img src="http://103.252.1.147:9081/<%= data[i]['profile']['url']%>" class="img-fluid"
+                                        alt="..."><span><%= data[i]["profile"]["displayname"] %> </span>
+                                </div>
+
+                                <div class="description">
+                                    <div class="card text-left">
+                                        <div class="card-body">
+                                            <p class="card-text"><span class="font-weight-bold">Trạng thái: </span><span
+                                                    class="text-success"><%= data[i]["Value"]["TrangThai"]%></span></p>
+                                            <p class="card-text"><span class="font-weight-bold">Địa chỉ: </span><span
+                                                    class="dia-chi"><%= data[i]["Value"]["DiaDiem"] %></span></p>
+                                            <p class="card-text"><span class="font-weight-bold">Số điện thoại: </span><span>
+                                                    <%= data[i]["profile"]["phonenumber"] %>
+                                                </span></p>
+                                            <p class="card-text"><span class="font-weight-bold">Mô tả: </span>
+                                                <%= data[i]["Value"]["MoTa"] %>
+                                            </p>
+                                            <div class="mo-ta-hinh-anh">
+                                                <div class="photoswipe-wrapper" data-pswp-uid="1">
+                                                    <div class="my-gallery flex-container">
+                                                        <% if (
+                                                            data[i]["descrip"] &&
+                                                            data[i]["descrip"]["message"] &&
+                                                            Array.isArray(data[i]["descrip"]["message"]["docs"])
+                                                        ) { %>
+                                                            <% for (let index = 0; index < data[i]["descrip"]["message"]["docs"].length; index++) { %>
+                                                                <% let descrip = data[i]["descrip"]["message"]["docs"][index] %>
+                                                                <% let content_type = data[i]["descrip"]["message"]["docs"][index]["content_type"] %>
+                                                                <% if (content_type == "video" && typeof(descrip["thumbnail"]) == "object" ) { %>
+                                                                <figure>
+                                                                    <% if (index > 3) { %>
+                                                                    <div class="photoswipe-item" hidden>
+                                                                    <% } else { %>
+                                                                    <div class="photoswipe-item">
+                                                                    <% } %>
+                                                                    <a href="#" data-type="video"
+                                                                        data-video="<div class=&quot;wrapper&quot;><div class=&quot;video-wrapper&quot;><video width=&quot;960&quot; class=&quot;pswp__video&quot; src=&quot;<%-descrip['path']%>&quot; controls></video></div></div>"
+                                                                        data-size="960x640">
+                                                                        <img src="<%= descrip['thumbnail']['path']%>" alt="Image description"
+                                                                            class="img-fluid"></a>
+                                                                    <figcaption itemprop="caption description">Image
+                                                                        caption 2.1
+                                                                    </figcaption>
+                                                                </div>
+                                                                </figure>
+                                                                <% } else if (content_type == "image")  { %>
+                                                                <figure>
+                                                                    <% if (index > 3) { %>
+                                                                    <div class="photoswipe-item" hidden>
+                                                                    <% } else { %>
+                                                                    <div class="photoswipe-item">
+                                                                    <% } %>
+                                                                    <a href="http://103.252.1.147:9081/<%= descrip['path']%>" data-size="600x400" onclick="window.location.replace('#&gid=<%=index+1%>&pid=<%=index+1%>')" >
+                                                                        <img src="http://103.252.1.147:9081/<%= descrip['path']%>"
+                                                                            alt="Image description" class="img-fluid"  >
+                                                                    </a>
+                                                                    <figcaption itemprop="caption description">Image
+                                                                        caption 2.1
+                                                                    </figcaption>
+                                                                </div>
+                                                                </figure>
+                                                                <% } else { %>
+                                                                <!-- <h4>Không có ảnh, video mô tả</h4> -->
+                                                                <% } %>
+                                                            <% } %>
+                                                        <% } else { %>
+                                                            <div>Không có mô tả hoặc dữ liệu offchain.</div>
+                                                        <% } %>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="niem-phong-cong-nghe">
+                                                <p><i class="fas fa-stamp"><span class="font-weigh-bold"> Niêm phong
+                                                            điện tử:</span></i></p>
+                                                <div class="row">
+                                                    <div class="col-6">
+                                                        <p class="niem-phong-header text-success">
+                                                            <%= data[i]["Value"]["HashValue"] %>
+                                                        </p>
+                                                    </div>
+                                                    <!-- <div class="col-1" style="padding: 2% 0% 0% 5%;color: #10b915;">
+                                    <i class="fas fa-check-circle "></i>
+                                </div> -->
+                                                    <div class="col-6">
+                                                        <div class="list-group">
+                                                            <button class="btn btn-primary btn-sm xem-them-chung-chi"
+                                                                type="button" data-toggle="collapse"
+                                                                data-target="#niemphong<%= i %> " aria-expanded="false"
+                                                                aria-controls="collapseExample">
+                                                                <span><i class="fas fa-check-circle "
+                                                                        style="color: #10b915;"></i></span> Xem
+                                                                thêm
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-12">
+                                                        <div class="collapse" id="niemphong<%= i %> ">
+                                                            <div class="card card-body">
+                                                                <li class="text-success niem-phong HashValue">
+                                                                    <%= data[i]["Value"]["HashValue"] %>
+                                                                </li>
+                                                                <li class="text-success niem-phong HashValueOffchain">
+                                                                    <%= data[i]["Value"]["HashValueOffchain"] %>
+                                                                </li>
+                                                                <li class="text-success niem-phong HashPb">
+                                                                    <%= data[i]["hashpbs"] %>
+                                                                </li>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                    </div>
+
+                                </div>
+                            </div>
+                        </div>
+                        <% } %>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- Root element of PhotoSwipe. Must have class pswp. -->
+            <div class="pswp" tabindex="-1" role="dialog" aria-hidden="true">
+
+                <!-- Background of PhotoSwipe.
+               It's a separate element as animating opacity is faster than rgba(). -->
+                <div class="pswp__bg"></div>
+
+                <!-- Slides wrapper with overflow:hidden. -->
+                <div class="pswp__scroll-wrap">
+
+                    <!-- Container that holds slides.
+                  PhotoSwipe keeps only 3 of them in the DOM to save memory.
+                  Don't modify these 3 pswp__item elements, data is added later on. -->
+                    <div class="pswp__container">
+                        <div class="pswp__item"></div>
+                        <div class="pswp__item"></div>
+                        <div class="pswp__item"></div>
+                    </div>
+
+                    <!-- Default (PhotoSwipeUI_Default) interface on top of sliding area. Can be changed. -->
+                    <div class="pswp__ui pswp__ui--hidden">
+                        <div class="pswp__top-bar">
+                            <!--  Controls are self-explanatory. Order can be changed. -->
+                            <div class="pswp__counter"></div>
+                            <button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+                            <button class="pswp__button pswp__button--share" title="Share"></button>
+                            <button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+                            <button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button>
+
+                            <!-- Preloader demo https://codepen.io/dimsemenov/pen/yyBWoR -->
+                            <!-- element will get class pswp__preloader--active when preloader is running -->
+                            <div class="pswp__preloader">
+                                <div class="pswp__preloader__icn">
+                                    <div class="pswp__preloader__cut">
+                                        <div class="pswp__preloader__donut"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap">
+                            <div class="pswp__share-tooltip"></div>
+                        </div>
+                        <button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+                        </button>
+                        <button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)">
+                        </button>
+                        <div class="pswp__caption">
+                            <div class="pswp__caption__center"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <script>
+                $('.photoswipe-wrapper').each(function () {
+                    $(this).find('a').each(function () {
+                        $(this).attr('data-size', $(this).find('img').get(0).naturalWidth + 'x' + $(this).find('img').get(0).naturalHeight);
+                    });
+                });
+
+                var initPhotoSwipeFromDOM = function (gallerySelector) {
+
+                    // parse slide data (url, title, size ...) from DOM elements
+                    // (children of gallerySelector)
+                    var parseThumbnailElements = function (el) {
+                        var thumbElements = $(el).find('.photoswipe-item:not(.isotope-hidden)').get(),
+                            numNodes = thumbElements.length,
+                            items = [],
+                            figureEl,
+                            linkEl,
+                            size,
+                            item;
+
+                        for (var i = 0; i < numNodes; i++) {
+
+                            figureEl = thumbElements[i]; // <figure> element
+
+                            // include only element nodes
+                            if (figureEl.nodeType !== 1) {
+                                continue;
+                            }
+
+                            linkEl = figureEl.children[0]; // <a> element
+
+                            size = linkEl.getAttribute('data-size').split('x');
+
+                            // create slide object
+                            if ($(linkEl).data('type') == 'video') {
+                                item = {
+                                    html: $(linkEl).data('video')
+                                };
+                            } else {
+                                item = {
+                                    src: linkEl.getAttribute('href'),
+                                    w: parseInt(size[0], 10),
+                                    h: parseInt(size[1], 10)
+                                };
+                            }
+
+                            if (figureEl.children.length > 1) {
+                                // <figcaption> content
+                                item.title = $(figureEl).find('.caption').html();
+                            }
+
+                            if (linkEl.children.length > 0) {
+                                // <img> thumbnail element, retrieving thumbnail url
+                                item.msrc = linkEl.children[0].getAttribute('src');
+                            }
+
+                            item.el = figureEl; // save link to element for getThumbBoundsFn
+                            items.push(item);
+                        }
+
+                        return items;
+                    };
+
+                    // find nearest parent element
+                    var closest = function closest(el, fn) {
+                        return el && (fn(el) ? el : closest(el.parentNode, fn));
+                    };
+
+                    function hasClass(element, cls) {
+                        return (' ' + element.className + ' ').indexOf(' ' + cls + ' ') > -1;
+                    }
+
+                    // triggers when user clicks on thumbnail
+                    var onThumbnailsClick = function (e) {
+                        e = e || window.event;
+                        e.preventDefault ? e.preventDefault() : e.returnValue = false;
+
+                        var eTarget = e.target || e.srcElement;
+
+                        // find root element of slide
+                        var clickedListItem = closest(eTarget, function (el) {
+                            return (hasClass(el, 'photoswipe-item'));
+                        });
+
+                        if (!clickedListItem) {
+                            return;
+                        }
+
+                        // find index of clicked item by looping through all child nodes
+                        // alternatively, you may define index via data- attribute
+                        var clickedGallery = clickedListItem.closest('.photoswipe-wrapper'),
+                            childNodes = $(clickedListItem.closest('.photoswipe-wrapper')).find('.photoswipe-item:not(.isotope-hidden)').get(),
+                            numChildNodes = childNodes.length,
+                            nodeIndex = 0,
+                            index;
+
+                        for (var i = 0; i < numChildNodes; i++) {
+                            if (childNodes[i].nodeType !== 1) {
+                                continue;
+                            }
+
+                            if (childNodes[i] === clickedListItem) {
+                                index = nodeIndex;
+                                break;
+                            }
+                            nodeIndex++;
+                        }
+
+                        if (index >= 0) {
+                            // open PhotoSwipe if valid index found
+                            openPhotoSwipe(index, clickedGallery);
+                        }
+                        return false;
+                    };
+
+                    // parse picture index and gallery index from URL (#&pid=1&gid=2)
+                    var photoswipeParseHash = function () {
+                        var hash = window.location.hash.substring(1),
+                            params = {};
+
+                        if (hash.length < 5) {
+                            return params;
+                        }
+
+                        var vars = hash.split('&');
+                        for (var i = 0; i < vars.length; i++) {
+                            if (!vars[i]) {
+                                continue;
+                            }
+                            var pair = vars[i].split('=');
+                            if (pair.length < 2) {
+                                continue;
+                            }
+                            params[pair[0]] = pair[1];
+                        }
+
+                        if (params.gid) {
+                            params.gid = parseInt(params.gid, 10);
+                        }
+
+                        return params;
+                    };
+
+                    var openPhotoSwipe = function (index, galleryElement, disableAnimation, fromURL) {
+                        var pswpElement = document.querySelectorAll('.pswp')[0],
+                            gallery,
+                            options,
+                            items;
+
+                        items = parseThumbnailElements(galleryElement);
+
+                        // define options (if needed)
+                        options = {
+
+                            closeOnScroll: false,
+
+                            // define gallery index (for URL)
+                            galleryUID: galleryElement.getAttribute('data-pswp-uid'),
+
+                            getThumbBoundsFn: function (index) {
+                                // See Options -> getThumbBoundsFn section of documentation for more info
+                                var thumbnail = items[index].el.getElementsByTagName('img')[0], // find thumbnail
+                                    pageYScroll = window.pageYOffset || document.documentElement.scrollTop,
+                                    rect = thumbnail.getBoundingClientRect();
+
+                                return {
+                                    x: rect.left,
+                                    y: rect.top + pageYScroll,
+                                    w: rect.width
+                                };
+                            }
+
+                        };
+
+                        // PhotoSwipe opened from URL
+                        if (fromURL) {
+                            if (options.galleryPIDs) {
+                                // parse real index when custom PIDs are used
+                                // http://photoswipe.com/documentation/faq.html#custom-pid-in-url
+                                for (var j = 0; j < items.length; j++) {
+                                    if (items[j].pid == index) {
+                                        options.index = j;
+                                        break;
+                                    }
+                                }
+                            } else {
+                                // in URL indexes start from 1
+                                options.index = parseInt(index, 10) - 1;
+                            }
+                        } else {
+                            options.index = parseInt(index, 10);
+                        }
+
+                        // exit if index not found
+                        if (isNaN(options.index)) {
+                            return;
+                        }
+
+                        if (disableAnimation) {
+                            options.showAnimationDuration = 0;
+                        }
+
+                        // Pass data to PhotoSwipe and initialize it
+                        gallery = new PhotoSwipe(pswpElement, PhotoSwipeUI_Default, items, options);
+                        gallery.init();
+
+                        gallery.listen('beforeChange', function () {
+                            var currItem = $(gallery.currItem.container);
+                            $('.pswp__video').removeClass('active');
+                            var currItemIframe = currItem.find('.pswp__video').addClass('active');
+                            $('.pswp__video').each(function () {
+                                if (!$(this).hasClass('active')) {
+                                    $(this).attr('src', $(this).attr('src'));
+                                }
+                            });
+                        });
+
+                        gallery.listen('close', function () {
+                            $('.pswp__video').each(function () {
+                                $(this).attr('src', $(this).attr('src'));
+                            });
+                        });
+
+                    };
+
+                    // loop through all gallery elements and bind events
+                    var galleryElements = document.querySelectorAll(gallerySelector);
+
+                    for (var i = 0, l = galleryElements.length; i < l; i++) {
+                        galleryElements[i].setAttribute('data-pswp-uid', i + 1);
+                        galleryElements[i].onclick = onThumbnailsClick;
+                    }
+
+                    // Parse URL and open gallery if it contains #&pid=3&gid=1
+                    var hashData = photoswipeParseHash();
+                    if (hashData.pid && hashData.gid) {
+                        openPhotoSwipe(hashData.pid, galleryElements[hashData.gid - 1], true, true);
+                    }
+
+                };
+
+                // execute above function
+
+                initPhotoSwipeFromDOM('.photoswipe-wrapper');
+            </script>
+
+
+
+</body>
+
+</html>

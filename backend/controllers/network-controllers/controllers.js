@@ -5,7 +5,7 @@ const path = require('path');
 const fs = require('fs');
 const fsPromises = fs.promises;
 
-const { buildCAClient, enrollAdmin } = require('../../services/CAUtil');
+const { buildCAClient, enrollAdmin, revokeUser, reenrollUser } = require('../../services/CAUtil');
 const { buildCCPOrg1, buildCCPOrg2, buildWallet } = require('../../services/AppUtil');
 const FabricCAServices = require('fabric-ca-client');
 const { Wallets } = require('fabric-network');
@@ -59,6 +59,59 @@ exports.enrollAdmin = async (req, res) => {
     }
 };
 
+exports.revokeUser = async (req, res) => {
+    const { org, userId, reason } = req.body;
+    try {
+        if (org !== 'org1' && org !== 'org2') {
+            return res.status(400).json({ error: 'Org must be org1 or org2' });
+        }
+        let ccp, caClient, wallet, walletPath, caName;
+        if (org === 'org1') {
+            ccp = buildCCPOrg1();
+            caName = 'org1-ca';
+        } else {
+            ccp = buildCCPOrg2();
+            caName = 'org2-ca';
+        }
+        caClient = buildCAClient(FabricCAServices, ccp, caName);
+        walletPath = getWalletPath(org);
+        await fsPromises.mkdir(walletPath, { recursive: true });
+        wallet = await buildWallet(Wallets, walletPath);
+        await revokeUser(caClient, wallet, userId, 'rcaadmin', reason);
+        res.json({ message: `Revoked user ${userId} in ${org} successfully` });
+    } catch (error) {
+        console.error('Error in revokeUser:', error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
+exports.reenrollUser = async (req, res) => {
+    const { org, userId } = req.body;
+    try {
+        if (org !== 'org1' && org !== 'org2') {
+            return res.status(400).json({ error: 'Org must be org1 or org2' });
+        }
+        let ccp, caClient, wallet, walletPath, mspId, caName;
+        if (org === 'org1') {
+            ccp = buildCCPOrg1();
+            caName = 'org1-ca';
+            mspId = mspOrg1;
+        } else {
+            ccp = buildCCPOrg2();
+            caName = 'org2-ca';
+            mspId = mspOrg2;
+        }
+        caClient = buildCAClient(FabricCAServices, ccp, caName);
+        walletPath = getWalletPath(org);
+        await fsPromises.mkdir(walletPath, { recursive: true });
+        wallet = await buildWallet(Wallets, walletPath);
+        await reenrollUser(caClient, wallet, userId, mspId);
+        res.json({ message: `Reenrolled user ${userId} in ${org} successfully` });
+    } catch (error) {
+        console.error('Error in reenrollUser:', error);
+        res.status(500).json({ error: error.message });
+    }
+};
 
 exports.getUser = async function(req, res){
     try{

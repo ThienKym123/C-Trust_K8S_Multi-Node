@@ -1,0 +1,90 @@
+<% for( let i = 0; i < data.length; i++ ) { %>
+
+    <div class="timeline" id="timeline<%- i %> ">
+        <div class="timeline-icon"></div>
+        <div class="timeline-content">
+            <h4 class="title ">Cập nhật lúc:
+                <%- data[i]["Value "["ThoiGian "]] %>
+            </h4>
+            <div class="owner-product ">
+                <img src="<%= data[i][" profile "][ " url "] %> " class="img-fluid" alt="..."><span><%= data[i]["profile"]["displayname"] %> </span>
+            </div>
+            <div class="description">
+                <div class="card text-left">
+                    <div class="card-body">
+                        <p class="card-text"><span class="font-weight-bold">Trạng thái: </span><span class="text-success"><%= data[i]["Value"]["TrangThai"] %></span></p>
+                        <p class="card-text"><span class="font-weight-bold">Địa chỉ: </span><span class="dia-chi"><%= data[i]["Value"]["DiaDiem"] %></span></p>
+                        <p class="card-text"><span class="font-weight-bold">Mô tả: </span>
+                            <%= data[i]["Value"]["MoTa"] %>
+                        </p>
+                        <div class="mo-ta-hinh-anh">
+                            <div class="photoswipe-wrapper" data-pswp-uid="1">
+                                <div class="my-gallery flex-container">
+                                    <% for( let index = 0; index < data[i]["descrip"]["message"]["docs"].length; index++ ) { %>
+                                        <% let descrip = data[i]["descrip"]["message"]["docs"][index] %>
+
+                                            <% if (descrip["content_type"] == "video") { %>
+                                                <figure>
+                                                    <div class="photoswipe-item" hidden>
+                                                        <a href="#" data-type="video" data-video="<div class=&quot;wrapper&quot;><div class=&quot;video-wrapper&quot;><video width=&quot;960&quot; class=&quot;pswp__video&quot; src=&quot;<%-descrip[" path "]%>&quot; controls></video></div></div>" data-size="960x640">
+                                                            <img src="<%= descrip[" thumbnail "]["path "]%>" alt="Image description" class="img-fluid"></a>
+                                                        <figcaption itemprop="caption description">Image caption 2.1
+                                                        </figcaption>
+                                                    </div>
+                                                </figure>
+                                                <% } else if (descrip["content_type"] == "image")  { %>
+                                                    <figure>
+                                                        <div class="photoswipe-item">
+                                                            <a href="<%= descrip[" thumbnail "]["path "]%>" data-size="600x400">
+                                                                <img src="<%= descrip[" thumbnail "]["path "]%>" alt="Image description" class="img-fluid">
+                                                            </a>
+                                                            <figcaption itemprop="caption description">Image caption 2.1
+                                                            </figcaption>
+                                                        </div>
+                                                    </figure>
+                                                    <% } else { %>
+                                                        <h1>Không có ảnh, video mô tả</h1>
+                                                        <% } %>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="niem-phong-cong-nghe">
+                            <p><i class="fas fa-stamp"><span class="font-weigh-bold"> Niêm phong điện tử:</span></i></p>
+                            <div class="row">
+                                <div class="col-6">
+                                    <p class="niem-phong-header text-success">
+                                        <%= data[i]["HashValue"][0] %>
+                                    </p>
+                                </div>
+                                <!-- <div class="col-1" style="padding: 2% 0% 0% 5%;color: #10b915;">
+                                    <i class="fas fa-check-circle "></i>
+                                </div> -->
+                                <div class="col-6">
+                                    <div class="list-group">
+                                        <button class="btn btn-primary btn-sm xem-them-chung-chi" type="button" data-toggle="collapse" data-target="#niemphong<%= i %> " aria-expanded="false" aria-controls="collapseExample">
+                                            <span><i class="fas fa-check-circle " style="color: #10b915;"></i></span> Xem
+                                            thêm
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <div class="collapse" id="niemphong<%= i %> ">
+                                        <div class="card card-body">
+                                            <% for( let index = 0; index < array.length; index++ ) { %>
+                                                <li class="text-success niem-phong-<%= index %> ">
+                                                    <%= data[i]["HashValue"][index] %>
+                                                </li>
+                                                <% } %>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+        </div>
+    </div>
+    <% } %>

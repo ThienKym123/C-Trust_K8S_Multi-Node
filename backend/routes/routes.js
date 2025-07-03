@@ -95,7 +95,12 @@ module.exports = function(app, passport) {
 
     app.get('/user', passport.authenticate('org1', { session: false }), sysctrl.getUser);
 
+    app.post('/user/revoke', passport.authenticate('org1', { session: false }), sysctrl.revokeUser);
+    
+    app.post('/user/reenroll', passport.authenticate('org1', { session: false }), sysctrl.reenrollUser);
 
+
+    
     app.post('/contract/create', passport.authenticate('org1', { session: false }), ccctrl.create);
 
     app.post('/contract/update', passport.authenticate('org1', { session: false }), ccctrl.update);
@@ -125,5 +130,6 @@ module.exports = function(app, passport) {
     // app.get('/qscc/getBlockbyNum',passport.authenticate('org1', { session: false }),ccctrl.getBlockbyNum);
 
     // app.get('/qscc/getBlockbyTxid', passport.authenticate('org1', { session: false }), ccctrl.getBlockByTxID);
+
 
 }

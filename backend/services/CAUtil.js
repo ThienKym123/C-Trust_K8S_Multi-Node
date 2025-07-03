@@ -96,3 +96,64 @@ exports.registerAndEnrollUser = async (caClient, wallet, orgMspId, userId, affil
 		console.error(`Failed to register user : ${error}`);
 	}
 };
+
+/**
+ * Revoke a user's certificate using the CA client.
+ * @param {*} caClient - The Fabric CA client
+ * @param {*} wallet - The wallet instance
+ * @param {*} userId - The user to revoke
+ * @param {*} adminUserId - The admin identity in the wallet
+ * @param {*} reason - Reason for revocation (optional)
+ */
+exports.revokeUser = async (caClient, wallet, userId, adminUserId, reason = 'cessationOfOperation') => {
+	try {
+		// Get admin identity
+		const adminIdentity = await wallet.get(adminUserId);
+		if (!adminIdentity) {
+			throw new Error('Admin identity not found in wallet');
+		}
+		const provider = wallet.getProviderRegistry().getProvider(adminIdentity.type);
+		const adminUser = await provider.getUserContext(adminIdentity, adminUserId);
+		// Revoke the user
+		await caClient.revoke({ enrollmentID: userId, reason }, adminUser);
+		// Optionally remove from wallet
+		await wallet.remove(userId);
+		console.log(`Successfully revoked user ${userId}`);
+	} catch (error) {
+		console.error(`Failed to revoke user ${userId}:`, error);
+		throw error;
+	}
+};
+
+/**
+ * Reenroll a user using the CA client.
+ * @param {*} caClient - The Fabric CA client
+ * @param {*} wallet - The wallet instance
+ * @param {*} userId - The user to reenroll
+ * @param {*} orgMspId - The MSP ID
+ */
+exports.reenrollUser = async (caClient, wallet, userId, orgMspId) => {
+	try {
+		const userIdentity = await wallet.get(userId);
+		if (!userIdentity) {
+			throw new Error(`Identity for user ${userId} not found in wallet`);
+		}
+		const provider = wallet.getProviderRegistry().getProvider(userIdentity.type);
+		const user = await provider.getUserContext(userIdentity, userId);
+		// Reenroll
+		const enrollment = await caClient.reenroll(user);
+		const x509Identity = {
+			credentials: {
+				certificate: enrollment.certificate,
+				privateKey: enrollment.key.toBytes(),
+			},
+			mspId: orgMspId,
+			type: 'X.509',
+		};
+		await wallet.put(userId, x509Identity);
+		console.log(`Successfully reenrolled user ${userId}`);
+	} catch (error) {
+		console.error(`Failed to reenroll user ${userId}:`, error);
+		throw error;
+	}
+};
