@@ -1,0 +1,78 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: explorerdb
+  namespace: ${KUBE_NAMESPACE}
+  labels:
+    app: explorerdb
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: explorerdb
+  template:
+    metadata:
+      labels:
+        app: explorerdb
+    spec:
+      containers:
+        - name: explorerdb
+          image: hyperledger/explorer-db:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: DATABASE_DATABASE
+              value: "fabricexplorer"
+            - name: DATABASE_USERNAME
+              value: "hppoc"
+            - name: DATABASE_PASSWORD
+              value: "password"
+          ports:
+            - containerPort: 5432
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          volumeMounts:
+            - name: pgdata
+              mountPath: /var/lib/postgresql/data
+          readinessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - hppoc
+                - -d
+                - fabricexplorer
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          livenessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - hppoc
+                - -d
+                - fabricexplorer
+            initialDelaySeconds: 60
+            periodSeconds: 30
+      volumes:
+        - name: pgdata
+          persistentVolumeClaim:
+            claimName: explorer-db-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: explorerdb
+  namespace: ${KUBE_NAMESPACE}
+spec:
+  selector:
+    app: explorerdb
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432
+  type: ClusterIP

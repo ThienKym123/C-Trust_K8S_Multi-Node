@@ -48,8 +48,6 @@ function pull_docker_images() {
   $CONTAINER_CLI pull ${CONTAINER_NAMESPACE} ${FABRIC_CONTAINER_REGISTRY}/fabric-orderer:$FABRIC_VERSION
   $CONTAINER_CLI pull ${CONTAINER_NAMESPACE} ${FABRIC_PEER_IMAGE}
   $CONTAINER_CLI pull ${CONTAINER_NAMESPACE} couchdb:$COUCHDB_VERSION
-
-  # $CONTAINER_CLI pull ${CONTAINER_NAMESPACE} ghcr.io/hyperledger/fabric-rest-sample:latest
   $CONTAINER_CLI pull ${CONTAINER_NAMESPACE} redis:6.2.5
 
   pop_fn
@@ -63,7 +61,6 @@ function push_docker_images() {
     "${FABRIC_CONTAINER_REGISTRY}/fabric-orderer:$FABRIC_VERSION"
     "${FABRIC_PEER_IMAGE}"
     "couchdb:$COUCHDB_VERSION"
-    # "ghcr.io/hyperledger/fabric-rest-sample:latest"
     "redis:6.2.5"
   )
 
@@ -82,9 +79,6 @@ function push_docker_images() {
       "couchdb:"*)
         target_image="$CONTROL_PLANE_IP:$LOCAL_REGISTRY_PORT/couchdb:$COUCHDB_VERSION"
         ;;
-      # "ghcr.io/hyperledger/fabric-rest-sample:"*)
-      #   target_image="$CONTROL_PLANE_IP:$LOCAL_REGISTRY_PORT/fabric-rest-sample:latest"
-      #   ;;
       "redis:"*)
         target_image="$CONTROL_PLANE_IP:$LOCAL_REGISTRY_PORT/redis:6.2.5"
         ;;

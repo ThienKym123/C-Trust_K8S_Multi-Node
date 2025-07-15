@@ -1,0 +1,106 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: explorer-config
+  namespace: ${KUBE_NAMESPACE}
+data:
+  config.json: |
+    {
+      "network-configs": {
+        "test-network": {
+          "name": "test-network",
+          "profile": "./connection-profile/test-network.json"
+        }
+      },
+      "license": "Apache-2.0"
+    }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: explorer-connection-profile
+  namespace: ${KUBE_NAMESPACE}
+data:
+  test-network.json: |
+    {
+      "name": "test-network",
+      "version": "1.0.0",
+      "client": {
+        "tlsEnable": true,
+        "adminCredential": {
+          "id": "exploreradmin",
+          "password": "exploreradminpw"
+        },
+        "enableAuthentication": true,
+        "organization": "Org1MSP",
+        "connection": {
+          "timeout": {
+            "peer": {
+              "endorser": "300"
+            },
+            "orderer": "300"
+          }
+        }
+      },
+      "channels": {
+        "mychannel": {
+          "peers": {
+            "org1-peer1.test-network.svc.cluster.local": {},
+            "org2-peer1.test-network.svc.cluster.local": {}
+          },
+          "connection": {
+            "timeout": {
+              "peer": {
+                "endorser": "6000",
+                "eventHub": "6000",
+                "eventReg": "6000"
+              }
+            }
+          }
+        }
+      },
+      "organizations": {
+        "Org1MSP": {
+          "mspid": "Org1MSP",
+          "adminPrivateKey": {
+            "path": "/tmp/crypto/org1/users/org1admin/msp/keystore/key.pem"
+          },
+          "peers": ["org1-peer1.test-network.svc.cluster.local"],
+          "signedCert": {
+            "path": "/tmp/crypto/org1/users/org1admin/msp/signcerts/cert.pem"
+          }
+        },
+        "Org2MSP": {
+          "mspid": "Org2MSP",
+          "adminPrivateKey": {
+            "path": "/tmp/crypto/org2/users/org2admin/msp/keystore/key.pem"
+          },
+          "peers": ["org2-peer1.test-network.svc.cluster.local"],
+          "signedCert": {
+            "path": "/tmp/crypto/org2/users/org2admin/msp/signcerts/cert.pem"
+          }
+        }
+      },
+      "peers": {
+        "org1-peer1.test-network.svc.cluster.local": {
+          "tlsCACerts": {
+            "path": "/tmp/crypto/org1/ca/tlsca-cert.pem"
+          },
+          "url": "grpcs://org1-peer1.test-network.svc.cluster.local:7051"
+        },
+        "org2-peer1.test-network.svc.cluster.local": {
+          "tlsCACerts": {
+            "path": "/tmp/crypto/org2/ca/tlsca-cert.pem"
+          },
+          "url": "grpcs://org2-peer1.test-network.svc.cluster.local:7051"
+        }
+      },
+      "orderers": {
+        "org0-orderer1.test-network.svc.cluster.local": {
+          "url": "grpcs://org0-orderer1.test-network.svc.cluster.local:6050",
+          "tlsCACerts": {
+            "path": "/tmp/crypto/org0/orderers/org0-orderer1/tls/ca.crt"
+          }
+        }
+      }
+    }

@@ -4,7 +4,7 @@
 CONTROL_PLANE_HOST="192.168.208.1"
 CONTROL_PLANE_USER="kym"
 CONTROL_PLANE_PASS="1" 
-BASE_PATH="/home/kym/Blockchain/fabric-samples/test-network-k8s"
+BASE_PATH=${PWD}
 
 # Worker Nodes
 WORKER_NODES=(

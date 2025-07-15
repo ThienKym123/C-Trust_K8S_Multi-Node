@@ -1,0 +1,120 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: explorer
+  namespace: ${KUBE_NAMESPACE}
+  labels:
+    app: explorer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: explorer
+  template:
+    metadata:
+      labels:
+        app: explorer
+    spec:
+      initContainers:
+        - name: wait-for-db
+          image: busybox:1.35
+          command: ['sh', '-c', 'until nc -z explorerdb 5432; do echo waiting for explorerdb; sleep 2; done;']
+        - name: extract-crypto
+          image: busybox:1.35
+          command:
+            - sh
+            - -c
+            - |
+              mkdir -p /tmp/crypto
+              cd /tmp/crypto
+              tar -xzf /crypto-archive/crypto.tar.gz
+              ls -la /tmp/crypto
+          volumeMounts:
+            - name: crypto-archive
+              mountPath: /crypto-archive
+            - name: crypto-extracted
+              mountPath: /tmp/crypto
+      containers:
+        - name: explorer
+          image: hyperledger/explorer:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: DATABASE_HOST
+              value: "explorerdb"
+            - name: DATABASE_DATABASE
+              value: "fabricexplorer"
+            - name: DATABASE_USERNAME
+              value: "hppoc"
+            - name: DATABASE_PASSWD
+              value: "password"
+            - name: LOG_LEVEL_APP
+              value: "info"
+            - name: LOG_LEVEL_DB
+              value: "info"
+            - name: LOG_LEVEL_CONSOLE
+              value: "info"
+            - name: LOG_CONSOLE_STDOUT
+              value: "true"
+            - name: DISCOVERY_AS_LOCALHOST
+              value: "false"
+          ports:
+            - containerPort: 8080
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "500m"
+            limits:
+              memory: "1Gi"
+              cpu: "1000m"
+          volumeMounts:
+            - name: config
+              mountPath: /opt/explorer/app/platform/fabric/config.json
+              subPath: config.json
+            - name: connection-profile
+              mountPath: /opt/explorer/app/platform/fabric/connection-profile
+            - name: crypto-extracted
+              mountPath: /tmp/crypto
+            - name: wallet
+              mountPath: /opt/wallet
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 30
+      volumes:
+        - name: config
+          configMap:
+            name: explorer-config
+        - name: connection-profile
+          configMap:
+            name: explorer-connection-profile
+        - name: crypto-archive
+          secret:
+            secretName: fabric-crypto-config
+            optional: false 
+        - name: crypto-extracted
+          emptyDir: {}
+        - name: wallet
+          persistentVolumeClaim:
+            claimName: explorer-wallet-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: explorer
+  namespace: ${KUBE_NAMESPACE}
+spec:
+  selector:
+    app: explorer
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+  type: ClusterIP

@@ -32,7 +32,7 @@ function print_help() {
   log "Log file           \t\t: ${LOG_FILE}"
   log "Debug log file     \t\t: ${DEBUG_FILE}"
   log
-  log "Usage: $0 {init|up|down|channel|chaincode|cc|anchor|rest-easy|application|cluster|rm|clean}"
+  log "Usage: $0 {init|up|down|channel|chaincode|cc|anchor|rest-easy|application|cluster|rm|clean|frontend-local|frontend-local-stop|backend|backend-clean|frontend|frontend-clean|explorer|explorer-clean}"
 }
 
 # Include scripts
@@ -49,6 +49,8 @@ source k8s-setup/chaincode.sh
 source k8s-setup/rest_sample.sh
 source k8s-setup/application_connection.sh
 source backend.sh
+source frontend.sh
+source explorer.sh
 
 # Initialize logging
 logging_init
@@ -116,6 +118,40 @@ case "${MODE}" in
     clean_backend
     pop_fn 0
     ;;  
+  frontend)
+    push_fn "Deploying frontend"
+    deploy_frontend
+    log "🏁 - Frontend is ready"
+    pop_fn 0
+    ;;
+  frontend-clean)
+    push_fn "Cleaning frontend"
+    clean_frontend
+    pop_fn 0
+    ;;
+  frontend-local)
+    push_fn "Running frontend locally"
+    run_frontend_local
+    pop_fn 0
+    ;;
+  frontend-local-stop)
+    push_fn "Stopping local frontend"
+    stop_frontend_local
+    pop_fn 0
+    ;;
+  explorer)
+    push_fn "Deploying Hyperledger Explorer"
+    create_crypto_secret
+    deploy_explorer
+    print_explorer_info
+
+    pop_fn 0
+    ;;
+  explorer-clean)
+    push_fn "Cleaning Hyperledger Explorer"
+    clean_explorer
+    pop_fn 0
+    ;;
   cluster)
     cluster_init
     ;;
