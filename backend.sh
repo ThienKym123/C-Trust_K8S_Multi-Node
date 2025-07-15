@@ -159,3 +159,36 @@ clean_couchdb_offchain() {
   kubectl wait --for=delete svc/couchdb-offchain -n ${KUBE_NAMESPACE} --timeout=30s || true
   kubectl wait --for=delete pvc/couchdb-offchain-pvc -n ${KUBE_NAMESPACE} --timeout=30s || true
 }
+
+clean_explorer() {
+  echo "🧹 Cleaning Fabric Explorer deployment and service..."
+  kubectl delete deployment fabric-explorer -n ${KUBE_NAMESPACE} --ignore-not-found
+  kubectl delete svc fabric-explorer -n ${KUBE_NAMESPACE} --ignore-not-found
+  kubectl delete pvc fabric-explorer-pvc -n ${KUBE_NAMESPACE} --ignore-not-found
+  echo "⏳ Waiting for Fabric Explorer resources to be terminated..."
+  kubectl wait --for=delete pod -l app=fabric-explorer -n ${KUBE_NAMESPACE} --timeout=60s || true
+  kubectl wait --for=delete svc/fabric-explorer -n ${KUBE_NAMESPACE} --timeout=30s || true
+  kubectl wait --for=delete pvc/fabric-explorer-pvc -n ${KUBE_NAMESPACE} --timeout=30s || true
+}
+
+build_explorer_image() {
+  echo "🔨 Building Hyperledger Fabric Explorer Docker image..."
+
+  # Clone the Fabric Explorer repository if not already cloned
+  if [ ! -d "fabric-explorer" ]; then
+    echo "📁 Cloning Fabric Explorer repository..."
+    git clone https://github.com/hyperledger/blockchain-explorer.git fabric-explorer
+  fi
+
+  # Build the Docker image
+  cd fabric-explorer
+  ${CONTAINER_CLI} build -t hyperledger/fabric-explorer:latest .
+
+  # Push to local registry
+  echo "📦 Pushing image to local registry ${CONTROL_PLANE_IP}:${LOCAL_REGISTRY_PORT}..."
+  ${CONTAINER_CLI} tag hyperledger/fabric-explorer:latest ${CONTROL_PLANE_IP}:${LOCAL_REGISTRY_PORT}/hyperledger/fabric-explorer:latest
+  ${CONTAINER_CLI} push ${CONTROL_PLANE_IP}:${LOCAL_REGISTRY_PORT}/hyperledger/fabric-explorer:latest
+  cd ..
+
+  echo "✅ Hyperledger Fabric Explorer image built and pushed successfully!"
+}
