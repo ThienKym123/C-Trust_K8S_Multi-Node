@@ -14,11 +14,11 @@ deploy_mongo() {
     # Deploy PVC cho MongoDB nếu chưa có
     if ! kubectl get pvc mongo-pvc -n ${KUBE_NAMESPACE} &> /dev/null; then
       echo "📦 Creating PVC mongo-pvc..."
-      kubectl apply -f kube/mongo-pvc.yaml -n ${KUBE_NAMESPACE}
+      kubectl apply -f kube/backend/mongo-pvc.yaml -n ${KUBE_NAMESPACE}
     else
       echo "📦 PVC mongo-pvc already exists."
     fi
-    kubectl apply -f kube/mongo-deployment.yaml -n ${KUBE_NAMESPACE}
+    kubectl apply -f kube/backend/mongo-deployment.yaml -n ${KUBE_NAMESPACE}
     echo "⏳ Waiting for MongoDB to be ready..."
     kubectl rollout status deployment/mongo -n ${KUBE_NAMESPACE} --timeout=120s
   else
@@ -32,11 +32,11 @@ deploy_couchdb_offchain() {
   if ! kubectl get deployment couchdb-offchain -n ${KUBE_NAMESPACE} &> /dev/null; then
     if ! kubectl get pvc couchdb-offchain-pvc -n ${KUBE_NAMESPACE} &> /dev/null; then
       echo "📦 Creating PVC couchdb-offchain-pvc..."
-      kubectl apply -f kube/couchdb-offchain-pvc.yaml -n ${KUBE_NAMESPACE}
+      kubectl apply -f kube/backend/couchdb-offchain-pvc.yaml -n ${KUBE_NAMESPACE}
     else
       echo "📦 PVC couchdb-offchain-pvc already exists."
     fi
-    kubectl apply -f kube/couchdb-offchain.yaml -n ${KUBE_NAMESPACE}
+    kubectl apply -f kube/backend/couchdb-offchain.yaml -n ${KUBE_NAMESPACE}
     echo "⏳ Waiting for CouchDB offchain to be ready..."
     kubectl rollout status deployment/couchdb-offchain -n ${KUBE_NAMESPACE} --timeout=120s
 
@@ -66,7 +66,7 @@ deploy_backend() {
   # Deploy PVC fabric-wallet (if not exist)
   if ! kubectl get pvc fabric-wallet -n ${KUBE_NAMESPACE} &> /dev/null; then
     echo "📦 Creating PVC fabric-wallet..."
-    envsubst < kube/fabric-wallet-pvc.yaml | kubectl apply -f -
+    envsubst < kube/backend/fabric-wallet-pvc.yaml | kubectl apply -f -
   else
     echo "📦 PVC fabric-wallet already exists."
   fi
@@ -88,9 +88,9 @@ deploy_backend() {
   # Deploy backend Deployment + Service + Ingress
   echo "📁 Creating backend deployment, service, and ingress..."
 
-  envsubst < kube/backend-deployment.yaml | kubectl apply -f -
-  envsubst < kube/backend-service.yaml | kubectl apply -f -
-  envsubst < kube/backend-ingress.yaml | kubectl apply -f -
+  envsubst < kube/backend/backend-deployment.yaml | kubectl apply -f -
+  envsubst < kube/backend/backend-service.yaml | kubectl apply -f -
+  envsubst < kube/backend/backend-ingress.yaml | kubectl apply -f -
 
   # Wait for deployment to become ready
   echo "⏳ Waiting for backend deployment to be ready..."
