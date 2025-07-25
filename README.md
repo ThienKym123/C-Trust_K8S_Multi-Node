@@ -80,9 +80,9 @@ Clean backend:
 Shut down the kubeadm multi node network: 
 
 ```shell
-./start down 
+./start.sh down 
 
-./start clean
+./start.sh clean
 ```
 
 - On Worker node:
