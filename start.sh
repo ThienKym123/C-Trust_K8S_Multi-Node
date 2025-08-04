@@ -96,12 +96,6 @@ case "${MODE}" in
   anchor)
     update_anchor_peers "$@"
     ;;
-  rest-easy)
-    push_fn "Launching fabric-rest-sample application"
-    launch_rest_sample
-    log "🏁 - Fabric REST sample is ready"
-    pop_fn 0
-    ;;
   application)
     push_fn "Getting application connection information"
     application_connection
@@ -144,7 +138,6 @@ case "${MODE}" in
     create_crypto_secret
     deploy_explorer
     print_explorer_info
-
     pop_fn 0
     ;;
   explorer-clean)
@@ -154,6 +147,9 @@ case "${MODE}" in
     ;;
   cluster)
     cluster_init
+    push_fn "Building backend image"
+    build_backend_image
+    pop_fn 0
     ;;
   rm)
     cluster_clean

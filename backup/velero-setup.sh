@@ -148,6 +148,20 @@ aws_secret_access_key=$MINIO_SECRET_KEY
 EOF
     
     log "Velero credentials file created"
+
+    # Ensure the local backup bucket exists
+    log "Ensuring MinIO bucket 'local' exists..."
+    mc alias set velero http://${MINIO_HOST}:${MINIO_PORT} ${MINIO_ACCESS_KEY} ${MINIO_SECRET_KEY} >/dev/null
+    mc mb velero/fabric-backup --ignore-existing
+    mc mb velero/local --ignore-existing
+    if [ $? -eq 0 ]; then
+        log "MinIO bucket 'local' is ready."
+    else
+        log "ERROR: Failed to create or verify MinIO bucket 'local'."
+        pop_fn 1
+        exit 1
+    fi
+
     pop_fn 0
 }
 
@@ -196,36 +210,70 @@ install_velero() {
 
 # Function to create backup schedules
 create_backup_schedules() {
-    push_fn "Creating backup schedules"
-    
-    # Create daily full cluster backup
-    velero schedule create fabric-daily-full \
+    push_fn "Creating Velero backup schedules (optimized)"
+
+    # ================================
+    # 1️⃣ Weekly FULL cluster backup (Disaster Recovery)
+    # ================================
+    log "📅 Creating weekly FULL cluster backup (Sunday 3:00 AM, retention 90 days)..."
+    velero schedule create fabric-weekly-full \
+        --schedule="0 3 * * 0" \
+        --include-cluster-resources=true \
+        --exclude-namespaces=velero \
+        --exclude-resources=events.v1.core,replicasets.v1.apps,endpoints.v1.core \
+        --storage-location=default \
+        --default-volumes-to-fs-backup=true \
+        --ttl=2160h \
+        --namespace=$VELERO_NAMESPACE
+
+    # ================================
+    # 2️⃣ Daily Fabric namespace backup (Fast rollback)
+    # ================================
+    log "📅 Creating daily Fabric namespace backup (2:00 AM, retention 30 days)..."
+    velero schedule create fabric-daily \
         --schedule="0 2 * * *" \
-        --include-namespaces=$KUBE_NAMESPACE \
+        --include-namespaces=$FABRIC_NAMESPACE \
         --storage-location=default \
-        --ttl=720h0m0s \
-        --namespace=$MINIO_NAMESPACE
-    
-    # Create hourly namespace backup
-    velero schedule create fabric-hourly-namespace \
+        --default-volumes-to-fs-backup=true \
+        --ttl=720h \
+        --namespace=$VELERO_NAMESPACE
+
+    # ================================
+    # 3️⃣ Hourly Fabric namespace backup (Quick recovery)
+    # ================================
+    log "📅 Creating hourly Fabric namespace backup (every hour, retention 7 days)..."
+    velero schedule create fabric-hourly \
         --schedule="0 * * * *" \
-        --include-namespaces=$KUBE_NAMESPACE \
+        --include-namespaces=$FABRIC_NAMESPACE \
         --storage-location=default \
-        --ttl=168h0m0s \
-        --namespace=$MINIO_NAMESPACE
-    
-    # Create backup for system components
-    velero schedule create fabric-system-backup \
+        --default-volumes-to-fs-backup=true \
+        --ttl=168h \
+        --namespace=$VELERO_NAMESPACE
+
+    # ================================
+    # 4️⃣ Weekly system backup (kube-system, velero, minio)
+    # ================================
+    log "📅 Creating weekly system backup (Sunday 6:00 AM, retention 90 days)..."
+    velero schedule create system-weekly \
         --schedule="0 6 * * 0" \
-        --include-namespaces=kube-system,kube-public,kube-node-lease,$MINIO_NAMESPACE \
+        --include-namespaces=kube-system,kube-public,kube-node-lease,velero,minio \
         --storage-location=default \
-        --ttl=2160h0m0s \
-        --namespace=$MINIO_NAMESPACE
-    
-    log "Backup schedules created:"
-    log "  - fabric-daily-full: Daily at 2:00 AM (30 day retention)"
-    log "  - fabric-hourly-namespace: Every hour (7 day retention)"
-    log "  - fabric-system-backup: Weekly on Sunday at 6:00 AM (90 day retention)"
+        --ttl=2160h \
+        --namespace=$VELERO_NAMESPACE
+
+    # ================================
+    # ✅ Summary
+    # ================================
+    log "✅ Velero backup schedules created:"
+    log "  - fabric-weekly-full: Full cluster every Sunday 3:00 AM (90 days)"
+    log "  - fabric-daily: Fabric namespace daily 2:00 AM (30 days)"
+    log "  - fabric-hourly: Fabric namespace hourly (7 days)"
+    log "  - system-weekly: kube-system/velero/minio every Sunday 6:00 AM (90 days)"
+
+    # Verify schedules
+    log "🔍 Current Velero schedules:"
+    velero schedule get --namespace=$VELERO_NAMESPACE || log "⚠️ No schedules found!"
+
     pop_fn 0
 }
 
@@ -265,8 +313,8 @@ main() {
     validate_minio_connectivity
     create_backup_storage_location
     install_velero
-    create_backup_schedules
-    verify_backup_setup
+    # create_backup_schedules
+    # verify_backup_setup
     
     # Final status
     log "

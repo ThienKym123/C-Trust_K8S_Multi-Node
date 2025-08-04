@@ -106,14 +106,6 @@ select_backup() {
     log "   Status: $backup_status"
     log "   Created: $backup_created"
     
-    # Validate backup name format
-    if ! echo "$BACKUP_NAME" | grep -q '^fabric-cluster-backup-[0-9]\{8\}-[0-9]\{6\}$'; then
-        log "❌ Invalid backup name format: $BACKUP_NAME"
-        log "   Expected format: fabric-cluster-backup-YYYYMMDD-HHMMSS"
-        pop_fn 1
-        exit 1
-    fi
-    
     pop_fn 0
 }
 
@@ -121,111 +113,99 @@ select_backup() {
 restore_local_files() {
     push_fn "Restoring local files from MinIO"
     
+    # Use absolute path for backup directory, always resolve to project root
+    local BACKUP_ROOT=${PWD}
+    
     # Extract timestamp from backup name (e.g., fabric-cluster-backup-20250725-155020)
     local backup_timestamp=$(echo $BACKUP_NAME | sed 's/fabric-cluster-backup-//')
     
-    # Expected MinIO path for local backup
-    local minio_path="local-backups/local-files-${backup_timestamp}.tar.gz"
-    local local_backup_file="backup/local-files-${backup_timestamp}.tar.gz"
-    
-    log "☁️ Downloading local backup from MinIO..."
-    log "   MinIO path: $minio_path"
+    # Try to match the local tarball timestamp to the Velero backup timestamp
+    local backup_timestamp=$(echo $BACKUP_NAME | sed 's/fabric-cluster-backup-//')
+    local expected_file="local-files-${backup_timestamp}.tar.gz"
+    local found_file=""
+
+    if mc ls velero/local/$expected_file >/dev/null 2>&1; then
+        found_file=$expected_file
+        log "✅ Found matching local backup: $found_file"
+    else
+        # Fallback: use the latest available
+        found_file=$(mc ls velero/local/ | grep 'local-files-' | awk '{print $NF}' | sort | tail -1)
+        if [ -n "$found_file" ]; then
+            log "⚠️  No exact match for $expected_file, using latest available: $found_file"
+        else
+            log "❌ No local backup files found in MinIO local/"
+            pop_fn 1
+            return 1
+        fi
+    fi
+    local minio_path="local/$found_file"
+    local local_backup_file="$BACKUP_ROOT/backup/$found_file"
+    log "☁️ Downloading local backup from MinIO: $minio_path"
     log "   Local path: $local_backup_file"
     
-    # Create download job to get local backup from MinIO
-    local job_name="download-local-backup-$(date +%H%M%S)"
-    log "   Creating download job: $job_name"
-    
-    # Create the download job
-    kubectl create job "$job_name" --image=amazon/aws-cli:latest -n $VELERO_NAMESPACE \
-        --dry-run=client -o yaml | \
-        sed "/spec:/a\\
-  template:\\
-    spec:\\
-      restartPolicy: Never\\
-      containers:\\
-      - name: aws-cli\\
-        image: amazon/aws-cli:latest\\
-        env:\\
-        - name: AWS_ACCESS_KEY_ID\\
-          value: \"${MINIO_ACCESS_KEY:-minio}\"\\
-        - name: AWS_SECRET_ACCESS_KEY\\
-          value: \"${MINIO_SECRET_KEY:-minio123}\"\\
-        - name: AWS_DEFAULT_REGION\\
-          value: \"us-east-1\"\\
-        command: [\"sh\", \"-c\"]\\
-        args: [\"aws --endpoint-url=http://${MINIO_HOST:-192.168.208.148}:${MINIO_PORT:-9000} s3 cp s3://${MINIO_BUCKET:-fabric-backup}/${minio_path} /backup/$(basename $local_backup_file) && echo Download completed || echo Download failed\"]\\
-        volumeMounts:\\
-        - name: backup-volume\\
-          mountPath: /backup\\
-      volumes:\\
-      - name: backup-volume\\
-        hostPath:\\
-          path: \"$(pwd)/backup\"" | \
-    kubectl apply -f - 2>/dev/null
-    
-    if [ $? -eq 0 ]; then
-        log "   Waiting for download to complete..."
-        
-        # Wait for job to complete (max 2 minutes)
-        local timeout=120
-        local elapsed=0
-        while [ $elapsed -lt $timeout ]; do
-            local job_status=$(kubectl get job "$job_name" -n $VELERO_NAMESPACE -o jsonpath='{.status.conditions[0].type}' 2>/dev/null || echo "")
-            if [ "$job_status" = "Complete" ]; then
-                log "✅ Download job completed successfully"
-                break
-            elif [ "$job_status" = "Failed" ]; then
-                log "❌ Download job failed"
-                pop_fn 1
-                return 1
-            fi
-            sleep 5
-            elapsed=$((elapsed + 5))
-        done
-        
-        # Clean up the job
-        kubectl delete job "$job_name" -n $VELERO_NAMESPACE 2>/dev/null || true
-        
-        # Check if file was downloaded
-        if [ -f "$local_backup_file" ]; then
-            log "✅ Local backup downloaded successfully: $local_backup_file"
-            local backup_size=$(du -h "$local_backup_file" | cut -f1)
-            log "   Backup size: $backup_size"
-        else
-            log "❌ Local backup file not found after download"
-            log "   Checking for alternative local backups..."
-            
-            # Fallback to any existing local backup
-            local_backup_file=$(ls backup/local-files-*.tar.gz 2>/dev/null | tail -1)
-            if [ -n "$local_backup_file" ]; then
-                log "⚠️ Using existing local backup: $local_backup_file"
-                backup_timestamp=$(basename "$local_backup_file" | sed 's/local-files-//;s/.tar.gz//')
-            else
-                log "❌ No local backup files available"
-                log "   Kubernetes restore will proceed, but build directory won't be restored"
-                pop_fn 0
-                return 0
-            fi
-        fi
-    else
-        log "❌ Failed to create download job"
+    # Check if mc is installed
+    if ! command -v mc &>/dev/null; then
+        log "❌ ERROR: MinIO Client (mc) is not installed"
+        log "   Please install mc: wget https://dl.min.io/client/mc/release/linux-amd64/mc && chmod +x mc && sudo mv mc /usr/local/bin/"
         pop_fn 1
         return 1
     fi
     
+    # Configure mc alias
+    log "🔍 Configuring MinIO client..."
+    mc alias set velero http://${MINIO_HOST:-192.168.208.148}:${MINIO_PORT:-9000} ${MINIO_ACCESS_KEY:-minioadmin} ${MINIO_SECRET_KEY:-minioadmin123}
+    if [ $? -ne 0 ]; then
+        log "❌ ERROR: Failed to configure MinIO client alias"
+        pop_fn 1
+        return 1
+    fi
+
+    # Verify alias
+    if ! mc ls velero >/dev/null 2>&1; then
+        log "❌ ERROR: MinIO alias 'velero' is not accessible"
+        pop_fn 1
+        return 1
+    fi
+    
+    # Ensure backup directory exists
+    mkdir -p "$BACKUP_ROOT/backup"
+    
+    # Download local backup from MinIO
+    log "   Downloading from MinIO..."
+    mc cp velero/$minio_path "$local_backup_file"
+    if [ $? -eq 0 ]; then
+        log "✅ Local backup downloaded successfully: $local_backup_file"
+        local backup_size=$(du -h "$local_backup_file" | cut -f1)
+        log "   Backup size: $backup_size"
+    else
+        log "❌ Failed to download local backup from MinIO"
+        log "   Checking for alternative local backups..."
+        
+        # Fallback to any existing local backup
+        local_backup_file=$(ls "$BACKUP_ROOT/backup/local-files-"*.tar.gz 2>/dev/null | tail -1)
+        if [ -n "$local_backup_file" ]; then
+            log "⚠️ Using existing local backup: $local_backup_file"
+            backup_timestamp=$(basename "$local_backup_file" | sed 's/local-files-//;s/.tar.gz//')
+        else
+            log "❌ No local backup files available"
+            log "   Kubernetes restore will proceed, but build directory won't be restored"
+            pop_fn 0
+            return 0
+        fi
+    fi
+    
     # Backup current build directory if it exists
-    if [ -d "build" ]; then
-        local backup_dir="build.backup.$(date +%Y%m%d-%H%M%S)"
+    if [ -d "$BACKUP_ROOT/build" ]; then
+        local backup_dir="$BACKUP_ROOT/build.backup.$(date +%Y%m%d-%H%M%S)"
         log "💾 Backing up current build directory to: $backup_dir"
-        mv build "$backup_dir" || true
+        mv "$BACKUP_ROOT/build" "$backup_dir" || true
     fi
     
     # Extract local backup
     log "📂 Extracting local backup..."
     
     # Create temporary extraction directory
-    local temp_dir="backup/temp_restore_$(date +%H%M%S)"
+    local temp_dir="$BACKUP_ROOT/backup/temp_restore_$(date +%H%M%S)"
     mkdir -p "$temp_dir"
     
     # Extract the backup
@@ -236,18 +216,18 @@ restore_local_files() {
         local extracted_dir=$(find "$temp_dir" -maxdepth 1 -type d -name "local-files-*" | head -1)
         if [ -n "$extracted_dir" ] && [ -d "$extracted_dir/build" ]; then
             # Restore only the build directory
-            cp -r "$extracted_dir/build" ./
+            cp -r "$extracted_dir/build" "$BACKUP_ROOT/"
             log "✅ Build directory restored (runtime-generated files only)"
             
             # Log what was restored
-            if [ -d "build/enrollments" ]; then
-                local cert_count=$(find build/enrollments -name "*.pem" 2>/dev/null | wc -l)
+            if [ -d "$BACKUP_ROOT/build/enrollments" ]; then
+                local cert_count=$(find "$BACKUP_ROOT/build/enrollments" -name "*.pem" 2>/dev/null | wc -l)
                 log "   ✅ Certificates restored: $cert_count files"
             fi
-            if [ -d "build/channel-msp" ]; then
+            if [ -d "$BACKUP_ROOT/build/channel-msp" ]; then
                 log "   ✅ Channel MSP restored"
             fi
-            if [ -d "build/cas" ]; then
+            if [ -d "$BACKUP_ROOT/build/cas" ]; then
                 log "   ✅ CA certificates restored"
             fi
         else
@@ -255,12 +235,12 @@ restore_local_files() {
         fi
         
         # Clean up temporary directory
-        rm -rf "$temp_dir"
+        rm -rf $temp_dir
         
         log "✅ Local files restoration completed"
     else
         log "❌ Failed to extract local backup"
-        rm -rf "$temp_dir"
+        rm -rf $temp_dir
         pop_fn 1
         return 1
     fi
@@ -276,30 +256,8 @@ restore_kubernetes_resources() {
     log "📦 From backup: $BACKUP_NAME"
     
     # Create the restore
-    if velero restore create $RESTORE_NAME --from-backup $BACKUP_NAME --wait; then
-        log "✅ Kubernetes resources restored successfully"
-        
-        # Get restore status
-        local restore_status=$(velero restore get $RESTORE_NAME -o jsonpath='{.status.phase}' 2>/dev/null || echo "Unknown")
-        local restore_errors=$(velero restore get $RESTORE_NAME -o jsonpath='{.status.errors}' 2>/dev/null || echo "0")
-        local restore_warnings=$(velero restore get $RESTORE_NAME -o jsonpath='{.status.warnings}' 2>/dev/null || echo "0")
-        
-        log "📊 Restore Status: $restore_status"
-        log "📊 Errors: $restore_errors, Warnings: $restore_warnings"
-        
-        if [ "$restore_errors" != "0" ]; then
-            log "⚠️ Restore completed with errors. Check restore details:"
-            log "   velero restore describe $RESTORE_NAME"
-        fi
-        
-        pop_fn 0
-        return 0
-    else
-        log "❌ Kubernetes restore failed"
-        log "   Check restore status: velero restore describe $RESTORE_NAME"
-        pop_fn 1
-        return 1
-    fi
+    velero restore create $RESTORE_NAME --from-backup $BACKUP_NAME
+    pop_fn 0
 }
 
 # Function to wait for pods to be ready
@@ -311,17 +269,17 @@ wait_for_pods() {
     # Wait up to 5 minutes for pods to be ready
     local timeout=300
     local elapsed=0
-    local check_interval=10
+    local check_interval=30
     
     while [ $elapsed -lt $timeout ]; do
         local total_pods=$(kubectl get pods -n $KUBE_NAMESPACE --no-headers 2>/dev/null | wc -l)
         local ready_pods=$(kubectl get pods -n $KUBE_NAMESPACE --no-headers 2>/dev/null | grep -E "Running|Completed" | wc -l)
-        
+
         if [ "$total_pods" -gt 0 ] && [ "$ready_pods" -eq "$total_pods" ]; then
             log "✅ All pods are ready ($ready_pods/$total_pods)"
             break
         fi
-        
+
         log "⏳ Pods status: $ready_pods/$total_pods ready..."
         sleep $check_interval
         elapsed=$((elapsed + check_interval))
@@ -357,13 +315,22 @@ verify_restore() {
         log "✅ Found $pod_count pods in $KUBE_NAMESPACE"
         
         # List running pods
-        kubectl get pods -n $KUBE_NAMESPACE --no-headers | while read name ready status restarts age; do
-            if [ "$status" = "Running" ]; then
-                log "  ✅ $name: $status ($ready ready)"
-            else
-                log "  ⚠️ $name: $status ($ready ready)"
-            fi
-        done
+        kubectl get pods -n $KUBE_NAMESPACE --no-headers | awk '{if ($3=="Running") {printf("  ✅ %s: %s (%s ready)\n", $1, $3, $2)} else {printf("  ⚠️ %s: %s (%s ready)\n", $1, $3, $2)}}' | while read line; do log "$line"; done
+
+        # Find and handle pods stuck in Init (Init or Init:*)
+        stuck_pods=$(kubectl get pods -n $KUBE_NAMESPACE --no-headers | awk '$3 ~ /^Init(:|$)/ {print $1}')
+        if [ -n "$stuck_pods" ]; then
+            for pod in $stuck_pods; do
+                if [ -n "$pod" ]; then
+                    log "  ⚠️ Pod $pod is stuck in Init. Describing before delete:"
+                    kubectl describe pod "$pod" -n $KUBE_NAMESPACE | awk '/restore-wait/ {print}'
+                    log "  🗑️ Deleting pod $pod (stuck in Init)"
+                    kubectl delete pod "$pod" -n $KUBE_NAMESPACE
+                fi
+            done
+        else
+            log "  ✅ No pods stuck in Init."
+        fi
     else
         log "❌ No pods found in namespace $KUBE_NAMESPACE"
     fi
@@ -394,7 +361,7 @@ verify_restore() {
         log "⚠️ Build directory not found"
         log "   This may indicate local files were not properly restored"
     fi
-    
+
     log "✅ Restore verification completed"
     pop_fn 0
 }

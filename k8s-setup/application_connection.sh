@@ -138,17 +138,4 @@ EOF
 
 function application_connection() {
     construct_application_configmap
-
-    log
-    log "For k8s applications:"
-    log "Config Maps created for the application"
-    log "To deploy your application update the image name and issue these commands"
-    log ""
-    log "kubectl -n $NS apply -f kube/application-deployment.yaml"
-    log "kubectl -n $NS rollout status deploy/application-deployment"
-    log
-    log "For non-k8s applications:"
-    log "ConnectionProfiles are in ${PWD}/build/application/gateways"
-    log "Identities are in ${PWD}/build/application/wallet"
-    log
 }
