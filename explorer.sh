@@ -122,14 +122,7 @@ function print_explorer_info() {
   push_fn "Explorer access information"
 
   local explorer_host="explorer.${DOMAIN}"
-  local explorer_url="http://${explorer_host}"
-  
-  if [[ "${CLUSTER_RUNTIME}" == "kind" ]]; then
-    echo "Explorer is available at: http://localhost:8080"
-    echo "Port forward with: kubectl port-forward -n ${KUBE_NAMESPACE} service/explorer 8080:8080"
-  else
-    echo "Explorer is available at: ${explorer_url}"
-  fi
+  local explorer_url="http://${explorer_host}:30443"
   
   echo ""
   echo "Default login credentials:"
@@ -138,7 +131,6 @@ function print_explorer_info() {
 
   pop_fn
 }
-
 
 function clean_explorer() {
   push_fn "Cleaning up Hyperledger Explorer"

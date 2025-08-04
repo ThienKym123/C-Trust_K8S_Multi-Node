@@ -106,9 +106,9 @@ deploy_backend() {
   kubectl get ingress -n ${KUBE_NAMESPACE} -l app=backend
   
   echo ""
-  echo "🌍 Access the backend at: https://backend.${DOMAIN}/health"
+  echo "🌍 Access the backend at: https://backend.${DOMAIN}:${NGINX_HTTPS_PORT}/health"
   echo "🔁 Example curl:"
-  echo "curl -k https://backend.${DOMAIN}/health"
+  echo "curl -k https://backend.${DOMAIN}:${NGINX_HTTPS_PORT}/health"
 }
 
 # Clean up backend resources
@@ -158,4 +158,17 @@ clean_couchdb_offchain() {
   kubectl wait --for=delete pod -l app=couchdb-offchain -n ${KUBE_NAMESPACE} --timeout=60s || true
   kubectl wait --for=delete svc/couchdb-offchain -n ${KUBE_NAMESPACE} --timeout=30s || true
   kubectl wait --for=delete pvc/couchdb-offchain-pvc -n ${KUBE_NAMESPACE} --timeout=30s || true
+}
+
+build_backend_image() {
+  echo "🔨 Building backend Docker image..."
+  cd backend
+  ${CONTAINER_CLI} build -t test-network-backend:latest .
+  cd ..
+
+  echo "📦 Pushing image to local registry ${CONTROL_PLANE_IP}:${LOCAL_REGISTRY_PORT}..."
+  ${CONTAINER_CLI} tag test-network-backend:latest ${CONTROL_PLANE_IP}:${LOCAL_REGISTRY_PORT}/test-network-backend:latest
+  ${CONTAINER_CLI} push ${CONTROL_PLANE_IP}:${LOCAL_REGISTRY_PORT}/test-network-backend:latest
+  cd ..
+  echo "✅ Backend image built and pushed successfully"
 }

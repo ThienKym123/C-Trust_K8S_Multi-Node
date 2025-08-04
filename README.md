@@ -2,16 +2,17 @@
 ## Dependencies
 Follow [Guide](./dependencies.md)
 
-## Quickstart 
+## Note 
 
 For kubeadm 4 node (1 control plane + 3 worker node):
 
-- 🖥️ Control Plane: kym
-- 👷 Worker Nodes: admin1, admin2, admin3
+- 🖥️ Control Plane: kym (4-6GB RAM - 30-40GB ROM)
+- 👷 Worker Nodes: admin1, admin2, admin3 (2-3GB RAM - 20-25GB ROM each node)
+- Backup node: admin4 (512GB RAM - 10GB ROM)
 
 ⚠️ If you are using different hostnames or IP addresses, make sure to update all relevant files
 
-### Create k8s cluster
+## Create k8s cluster
 
 - On Control Plane Node:
 
@@ -42,6 +43,8 @@ Edit Control plane IP in [setup_worker.sh](./k8s-setup/setup-worker.sh) and copy
 ./start.sh cluster 
 ```
 
+## Launch the Fabric network
+
 Launch the network, create a channel, and deploy the smart contract: 
 ```shell
 ./start.sh up
@@ -67,6 +70,40 @@ Test API khi deploy chaincode "supplychain-cc": [C-trust_API](https://www.postma
 
 > Guest can scan QR to query history of product
 
+## Backup:
+
+Install velero:
+```shell
+backup/velero-setup.sh
+```
+
+Start backup:
+```shell
+backup/backup.sh
+```
+
+Restore:
+```shell
+velero backup get
+
+backup/restore.sh <backup-name>
+```
+
+The restore process may take a few minutes. You can check the status of the restore process by running the following command:
+```shell
+velero restore get
+
+velero restore describe <restore-name>
+```
+
+The fabric network may take around 10 minutes to be fully restored. You can check the status of the fabric network by running the following command:
+```shell
+kubectl -n test-network get pod
+```
+
+## Down network
+> Note: It will clean all data in k8s cluster
+
 Clean explorer:
 ```shell
 ./start.sh explorer-clean
@@ -90,7 +127,8 @@ Shut down the kubeadm multi node network:
 ./setup_worker.sh clean
 ```
 
-If any worker node shut down: 
+## Error handle
+If any worker node crashes: 
 ```shell
 ./setup_worker.sh restart
 ```

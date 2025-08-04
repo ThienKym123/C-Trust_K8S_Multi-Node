@@ -48,7 +48,6 @@ source k8s-setup/channel.sh
 source k8s-setup/chaincode.sh
 source k8s-setup/application_connection.sh
 source backend.sh
-source frontend.sh
 source explorer.sh
 
 # Initialize logging
@@ -95,12 +94,6 @@ case "${MODE}" in
   anchor)
     update_anchor_peers "$@"
     ;;
-  rest-easy)
-    push_fn "Launching fabric-rest-sample application"
-    launch_rest_sample
-    log "🏁 - Fabric REST sample is ready"
-    pop_fn 0
-    ;;
   application)
     push_fn "Getting application connection information"
     application_connection
@@ -117,33 +110,11 @@ case "${MODE}" in
     clean_backend
     pop_fn 0
     ;;  
-  frontend)
-    push_fn "Deploying frontend"
-    deploy_frontend
-    log "🏁 - Frontend is ready"
-    pop_fn 0
-    ;;
-  frontend-clean)
-    push_fn "Cleaning frontend"
-    clean_frontend
-    pop_fn 0
-    ;;
-  frontend-local)
-    push_fn "Running frontend locally"
-    run_frontend_local
-    pop_fn 0
-    ;;
-  frontend-local-stop)
-    push_fn "Stopping local frontend"
-    stop_frontend_local
-    pop_fn 0
-    ;;
   explorer)
     push_fn "Deploying Hyperledger Explorer"
     create_crypto_secret
     deploy_explorer
     print_explorer_info
-
     pop_fn 0
     ;;
   explorer-clean)
@@ -153,6 +124,9 @@ case "${MODE}" in
     ;;
   cluster)
     cluster_init
+    push_fn "Building backend image"
+    build_backend_image
+    pop_fn 0
     ;;
   rm)
     cluster_clean
