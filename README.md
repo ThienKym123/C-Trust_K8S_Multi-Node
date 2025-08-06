@@ -74,26 +74,26 @@ Test API khi deploy chaincode "supplychain-cc": [C-trust_API](https://www.postma
 
 Install velero:
 ```shell
-./backup setup
+./backup.sh setup
 ```
 
-1. Backup all k8s cluster:
+1. Backup all k8s cluster now:
 ```shell
-./backup schedule all
+./backup.sh backup 
 ```
 
 2. Schedule backup:
-- Backup-quick:
+- Backup-quick (Fabric Data-only backup (volumes + persistent data, 7 days)"):
 ```shell
-./backup schedule hourly
+./backup.sh schedule hourly
 ```
-- Backup-full:
+- Backup-full (Full Fabric network backup (all resources + volumes, 30 days)):
 ```shell
-./backup schedule daily
+./backup.sh schedule daily
 ```
-- Backup-comprehensive:
+- Backup-comprehensive (Complete cluster backup (180 days)):
 ```shell
-./backup schedule weekly
+./backup.sh schedule weekly
 ```
 
 Restore:

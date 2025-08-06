@@ -114,6 +114,18 @@ case "${MODE}" in
     fi
     pop_fn 0
     ;;
+  backup)
+    push_fn "Creating complete cluster backup"
+    if [[ -f "backup/backup.sh" ]]; then
+      backup/backup.sh "$@"
+      log "🏁 - Complete cluster backup created"
+    else
+      log "❌ Backup script not found: backup/backup.sh"
+      pop_fn 1
+      exit 1
+    fi
+    pop_fn 0
+    ;;  
   restore)
     push_fn "Restoring from backup"
     if [[ -f "backup/restore.sh" ]]; then
