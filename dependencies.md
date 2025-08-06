@@ -1,5 +1,4 @@
 # Cài đặt Dependencies
-[Guide](https://coral-onion-453.notion.site/Test-network-k8s-1eb5cf42e70280a9b26cfc01e7d44a91?pvs=73)
 
 ## Gỡ bỏ Kubernetes (Nếu đã cài đặt)
 
@@ -115,6 +114,25 @@ EOF
 sudo sysctl --system
 ```
 
+## Cài đặt NFS lưu trữ dữ liệu
+
+- Trên máy chủ NFS (192.168.208.1)
+```shell
+sudo apt-get install nfs-kernel-server -y
+sudo mkdir -p /mnt/nfs_share
+sudo chmod -R 777 /mnt/nfs_share
+echo '/mnt/nfs_share *(rw,sync,no_subtree_check,no_root_squash)' | sudo tee -a /etc/exports
+sudo exportfs -a
+sudo systemctl restart nfs-kernel-server
+```
+
+- Trên các workder node
+```shell
+sudo apt-get install nfs-common -y
+sudo mkdir -p /mnt/nfs_clientshare
+sudo mount 192.168.208.1:/mnt/nfs_share /mnt/nfs_clientshare
+```
+
 ## Cài đặt MinIO: Trên 1 máy riêng biệt (192.168.208.148)
 ```shell
 # Tải và cài đặt MinIO Binary
@@ -165,3 +183,4 @@ sudo mv mc /usr/local/bin/
 mc alias set velero http://192.168.208.148:9000 minioadmin minioadmin123
 mc alias set velero http://127.0.0.1:9000 minioadmin minioadmin123
 ```
+

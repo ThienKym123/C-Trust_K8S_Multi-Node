@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Environment Variables for Velero Backup System
-# Source this file before running velero-setup.sh
+# Source this file before running setup.sh
 #
 # Usage: source backup/env.sh
 #
@@ -44,6 +44,4 @@ echo "🪣 Backup Bucket: ${MINIO_BUCKET}"
 echo "🏷️  Fabric Namespace: ${KUBE_NAMESPACE}"
 echo "📦 Velero Namespace: ${VELERO_NAMESPACE}"
 echo ""
-echo "To apply these settings, run:"
-echo "  source backup/env.sh"
-echo "  ./backup/velero-setup.sh"
+

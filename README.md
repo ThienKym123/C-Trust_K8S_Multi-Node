@@ -34,7 +34,7 @@ Edit transfer-k3s.sh to transfer [registry.crt](./registry.crt) and [join-comman
 Edit Control plane IP in [setup_worker.sh](./k8s-setup/setup-worker.sh) and copy to locate in fabric-samples/test-network-k8s and run on 3 worker node
 
 ```shell
-./setup_worker.sh clean
+./setup_worker.sh init
 ```
 
 - On Control Plane node:
@@ -74,19 +74,33 @@ Test API khi deploy chaincode "supplychain-cc": [C-trust_API](https://www.postma
 
 Install velero:
 ```shell
-backup/velero-setup.sh
+./backup setup
 ```
 
-Start backup:
+1. Backup all k8s cluster:
 ```shell
-backup/backup.sh
+./backup schedule all
+```
+
+2. Schedule backup:
+- Backup-quick:
+```shell
+./backup schedule hourly
+```
+- Backup-full:
+```shell
+./backup schedule daily
+```
+- Backup-comprehensive:
+```shell
+./backup schedule weekly
 ```
 
 Restore:
 ```shell
-velero backup get
+./backup.sh list
 
-backup/restore.sh <backup-name>
+./backup.sh restore <backup-name>
 ```
 
 The restore process may take a few minutes. You can check the status of the restore process by running the following command:
@@ -128,7 +142,14 @@ Shut down the kubeadm multi node network:
 ```
 
 ## Error handle
-If any worker node crashes: 
+
+If entire k8s cluster down:
+- On control plane node:
+```shell
+./start.sh restart
+```
+
+- On each worker node : 
 ```shell
 ./setup_worker.sh restart
 ```

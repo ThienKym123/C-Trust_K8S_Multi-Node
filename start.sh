@@ -110,6 +110,11 @@ case "${MODE}" in
     clean_backend
     pop_fn 0
     ;;  
+  backend-restart)
+    push_fn "Restarting backend"
+    restart_backend
+    pop_fn 0
+    ;;
   explorer)
     push_fn "Deploying Hyperledger Explorer"
     create_crypto_secret
@@ -126,11 +131,18 @@ case "${MODE}" in
     cluster_init
     push_fn "Building backend image"
     build_backend_image
+    log "🏁 - Backend image built"
     pop_fn 0
     ;;
   rm)
     cluster_clean
     ;;
+  restart)
+    push_fn "Restarting Kubernetes cluster"
+    kubeadm_restart
+    log "🏁 - Kubernetes cluster is restarted"
+    pop_fn 0
+    ;;  
   clean)
     push_fn "Cleaning up kubeadm cluster"
     kubeadm_clean

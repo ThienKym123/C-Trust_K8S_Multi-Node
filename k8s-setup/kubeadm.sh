@@ -153,3 +153,10 @@ function kubeadm_clean() {
   rm -f join-cluster.sh $REGISTRY_CERT
   log "🏁 - Cluster is cleaned"
 }
+
+function kubeadm_restart() {
+  sudo swapoff -a
+  sudo sed -i '/ swap / s/^/#/' /etc/fstab
+  sudo systemctl daemon-reexec
+  sudo systemctl restart kubelet
+}

@@ -14,8 +14,10 @@ source backup/env.sh
 source k8s-setup/envVar.sh
 source k8s-setup/utils.sh
 
-# Initialize logging
-logging_init
+# Initialize logging (skip if called from main backup.sh)
+if [[ "$SKIP_LOGGING_INIT" != "true" ]]; then
+  logging_init
+fi
 
 # Check if environment variables are loaded
 if [ -z "$MINIO_HOST" ]; then
@@ -75,7 +77,7 @@ check_velero_cli() {
         log "Please install Velero CLI manually using the following commands:"
         log "   wget https://github.com/vmware-tanzu/velero/releases/download/v1.16.1/velero-v1.16.1-linux-amd64.tar.gz"
         log "   tar -xvf velero-v1.16.1-linux-amd64.tar.gz"
-        log "   sudo mv velero-v1.16.1-linux-amd64/velero /usr/local/bin/"
+        log "   mv velero-v1.16.1-linux-amd64/velero ~/bin/ (or add to PATH)"
         pop_fn 1
         exit 1
     fi
@@ -208,95 +210,6 @@ install_velero() {
     pop_fn 0
 }
 
-# Function to create backup schedules
-create_backup_schedules() {
-    push_fn "Creating Velero backup schedules (optimized)"
-
-    # ================================
-    # 1️⃣ Weekly FULL cluster backup (Disaster Recovery)
-    # ================================
-    log "📅 Creating weekly FULL cluster backup (Sunday 3:00 AM, retention 90 days)..."
-    velero schedule create fabric-weekly-full \
-        --schedule="0 3 * * 0" \
-        --include-cluster-resources=true \
-        --exclude-namespaces=velero \
-        --exclude-resources=events.v1.core,replicasets.v1.apps,endpoints.v1.core \
-        --storage-location=default \
-        --default-volumes-to-fs-backup=true \
-        --ttl=2160h \
-        --namespace=$VELERO_NAMESPACE
-
-    # ================================
-    # 2️⃣ Daily Fabric namespace backup (Fast rollback)
-    # ================================
-    log "📅 Creating daily Fabric namespace backup (2:00 AM, retention 30 days)..."
-    velero schedule create fabric-daily \
-        --schedule="0 2 * * *" \
-        --include-namespaces=$FABRIC_NAMESPACE \
-        --storage-location=default \
-        --default-volumes-to-fs-backup=true \
-        --ttl=720h \
-        --namespace=$VELERO_NAMESPACE
-
-    # ================================
-    # 3️⃣ Hourly Fabric namespace backup (Quick recovery)
-    # ================================
-    log "📅 Creating hourly Fabric namespace backup (every hour, retention 7 days)..."
-    velero schedule create fabric-hourly \
-        --schedule="0 * * * *" \
-        --include-namespaces=$FABRIC_NAMESPACE \
-        --storage-location=default \
-        --default-volumes-to-fs-backup=true \
-        --ttl=168h \
-        --namespace=$VELERO_NAMESPACE
-
-    # ================================
-    # 4️⃣ Weekly system backup (kube-system, velero, minio)
-    # ================================
-    log "📅 Creating weekly system backup (Sunday 6:00 AM, retention 90 days)..."
-    velero schedule create system-weekly \
-        --schedule="0 6 * * 0" \
-        --include-namespaces=kube-system,kube-public,kube-node-lease,velero,minio \
-        --storage-location=default \
-        --ttl=2160h \
-        --namespace=$VELERO_NAMESPACE
-
-    # ================================
-    # ✅ Summary
-    # ================================
-    log "✅ Velero backup schedules created:"
-    log "  - fabric-weekly-full: Full cluster every Sunday 3:00 AM (90 days)"
-    log "  - fabric-daily: Fabric namespace daily 2:00 AM (30 days)"
-    log "  - fabric-hourly: Fabric namespace hourly (7 days)"
-    log "  - system-weekly: kube-system/velero/minio every Sunday 6:00 AM (90 days)"
-
-    # Verify schedules
-    log "🔍 Current Velero schedules:"
-    velero schedule get --namespace=$VELERO_NAMESPACE || log "⚠️ No schedules found!"
-
-    pop_fn 0
-}
-
-# Function to verify backup setup
-verify_backup_setup() {
-    push_fn "Verifying backup setup"
-    
-    # Check Velero status
-    log "Checking Velero server status..."
-    velero get backup-locations --namespace=$MINIO_NAMESPACE
-    
-    # List backups
-    log "Listing current backups..."
-    velero get backups --namespace=$MINIO_NAMESPACE
-    
-    # List schedules
-    log "Listing backup schedules..."
-    velero get schedules --namespace=$MINIO_NAMESPACE
-    
-    log "Backup setup verification completed"
-    pop_fn 0
-}
-
 # Main execution function
 main() {
     log "
@@ -313,9 +226,7 @@ main() {
     validate_minio_connectivity
     create_backup_storage_location
     install_velero
-    # create_backup_schedules
-    # verify_backup_setup
-    
+
     # Final status
     log "
 ╔══════════════════════════════════════════════════════════════╗
@@ -323,8 +234,8 @@ main() {
 ╚══════════════════════════════════════════════════════════════╝"
 
     log "📋 Next Steps:"
-    log "   1. Monitor backups: ./backup/velero-monitor.sh"
-    log "   2. Test restore: ./backup/velero-restore.sh list"
+    log "   1. Create backup schedules: ./backup/schedule.sh"
+    log "   2. Monitor backups: ./backup/monitor.sh"
     log "🔐 MinIO credentials saved to: /tmp/minio-credentials.env"
     log "📝 Detailed logs: $LOG_FILE and $DEBUG_LOG_FILE"
     log "🕐 Setup completed at: $(date)"

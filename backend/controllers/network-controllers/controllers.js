@@ -14,10 +14,6 @@ const mspOrg1 = 'Org1MSP';
 const mspOrg2 = 'Org2MSP';
 
 var logger = require('../../services/utils/utils.js').getLogger("Network-Controller")
-//registerUser: Handler tiep nhan tac vu dang ky nguoi dung
-//      Output:
-//          success: trang thai thuc hien
-//          message: thong tin nguoi dung hien tai
 
 function getWalletPath(org) {
     return path.join('/fabric/application/wallet', org);
@@ -49,6 +45,12 @@ exports.enrollAdmin = async (req, res) => {
         await fsPromises.mkdir(walletPath, { recursive: true });
         
         wallet = await buildWallet(Wallets, walletPath);
+
+        // Check to see if we've already enrolled the admin user.
+        const identity = await wallet.get('rcaadmin');
+        if (identity) {
+            return res.json({ message: `An identity for the admin user "rcaadmin" already exists in the wallet` });
+        }
 
         await enrollAdmin(caClient, wallet, mspId);
 

@@ -236,11 +236,14 @@ restore_local_files() {
         
         # Clean up temporary directory
         rm -rf $temp_dir
+        rm -rf $local_backup_file
         
         log "✅ Local files restoration completed"
     else
         log "❌ Failed to extract local backup"
         rm -rf $temp_dir
+        rm -rf $local_backup_file
+
         pop_fn 1
         return 1
     fi
@@ -255,10 +258,22 @@ restore_kubernetes_resources() {
     log "🔄 Creating Velero restore: $RESTORE_NAME"
     log "📦 From backup: $BACKUP_NAME"
     
-    # Create the restore
-    velero restore create $RESTORE_NAME --from-backup $BACKUP_NAME
-    pop_fn 0
+    # Create the restore and wait for it to complete
+    if velero restore create "$RESTORE_NAME" --from-backup "$BACKUP_NAME" --wait; then
+        STATUS=$(velero restore get "$RESTORE_NAME" -o json | jq -r '.status.phase')
+        if [[ "$STATUS" == "Completed" ]]; then
+            log "✅ Restore '$RESTORE_NAME' completed successfully."
+            pop_fn 0
+        else
+            log "❌ Restore '$RESTORE_NAME' failed or partially completed. Status: $STATUS"
+            pop_fn 1
+        fi
+    else
+        log "❌ Failed to create Velero restore: $RESTORE_NAME"
+        pop_fn 1
+    fi
 }
+
 
 # Function to wait for pods to be ready
 wait_for_pods() {
@@ -295,7 +310,6 @@ wait_for_pods() {
     
     pop_fn 0
 }
-
 # Function to verify restore
 verify_restore() {
     push_fn "Verifying restore completion"
@@ -409,14 +423,7 @@ main() {
 ✅ VERIFICATION COMMANDS:
    Check pods: kubectl get pods -n $KUBE_NAMESPACE
    Check PVCs: kubectl get pvc -n $KUBE_NAMESPACE
-   Check services: kubectl get svc -n $KUBE_NAMESPACE
-   
-✅ NEXT STEPS:
-   Deploy chaincode: ./start.sh chaincode deploy supplychain-cc ./chaincode-go/
-   Start applications: ./start.sh application
-   Launch backend: ./start.sh backend
-   Launch explorer: ./start.sh explorer"
-    
+   Check services: kubectl get svc -n $KUBE_NAMESPACE"
     pop_fn 0
 }
 
