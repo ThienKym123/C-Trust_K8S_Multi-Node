@@ -82,7 +82,7 @@ spec:
                   - key: kubernetes.io/hostname
                     operator: In
                     values:
-                      - admin3
+                      - ${ORG2_NODE}
       tolerations:
         - key: "node.kubernetes.io/not-ready"
           operator: "Exists"

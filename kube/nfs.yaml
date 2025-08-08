@@ -11,5 +11,5 @@ spec:
     - ReadWriteMany  
   nfs:
     path: /mnt/nfs_share/  
-    server: 192.168.208.1  
+    server: ${CONTROL_PLANE_IP}  
   persistentVolumeReclaimPolicy: Retain  

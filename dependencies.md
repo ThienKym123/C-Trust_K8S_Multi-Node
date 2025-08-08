@@ -55,7 +55,7 @@ sudo systemctl restart containerd
 sudo systemctl enable containerd
 
 # Cài đặt Docker và Golang (cho Fabric)
-sudo apt-get install git curl docker.io docker-compose golang-go -y
+sudo apt-get install git curl docker.io docker-compose golang-go jq -y
 sudo systemctl start docker
 sudo usermod -aG docker $USER
 
@@ -65,6 +65,23 @@ docker-compose --version
 
 sudo systemctl enable docker
 sudo reboot
+```
+
+## Cài NodeJS
+```shell
+# Cài đặt nvm
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+
+nvm --version
+
+# Cài đặt NodeJS
+nvm install 23
+nvm alias default 23
+nvm use 23
 ```
 
 ## Cài đặt Hyperledger Fabric
@@ -90,6 +107,9 @@ sudo apt-get install -y kubelet=1.33.0-1.1 kubeadm=1.33.0-1.1 kubectl=1.33.0-1.1
 sudo apt-mark hold kubelet kubeadm kubectl
 sudo systemctl enable kubelet
 sudo systemctl start kubelet
+
+# Cài helm
+curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 ```
 ## Cấu hình hệ thống
 ```shell

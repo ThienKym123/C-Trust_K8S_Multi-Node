@@ -34,7 +34,7 @@ Edit transfer-k3s.sh to transfer [registry.crt](./registry.crt) and [join-comman
 Edit Control plane IP in [setup_worker.sh](./k8s-setup/setup-worker.sh) and copy to locate in fabric-samples/test-network-k8s and run on 3 worker node
 
 ```shell
-./setup_worker.sh init
+./setup-worker.sh init
 ```
 
 - On Control Plane node:
@@ -131,14 +131,14 @@ Clean backend:
 Shut down the kubeadm multi node network: 
 
 ```shell
-./start down 
+./start.sh down 
 
-./start clean
+./start.sh clean
 ```
 
 - On Worker node:
 ```shell
-./setup_worker.sh clean
+./setup-worker.sh clean
 ```
 
 ## Error handle
@@ -151,7 +151,7 @@ If entire k8s cluster down:
 
 - On each worker node : 
 ```shell
-./setup_worker.sh restart
+./setup-worker.sh restart
 ```
 
 The system continues to function normally after a worker node restarts, as long as the pods are running stably

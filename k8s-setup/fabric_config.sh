@@ -40,7 +40,7 @@ function init_storage_volumes() {
   helm repo add nfs-subdir-external-provisioner https://kubernetes-sigs.github.io/nfs-subdir-external-provisioner/ || true
   helm upgrade --install nfs-subdir-external-provisioner nfs-subdir-external-provisioner/nfs-subdir-external-provisioner \
     --namespace nfs-provisioner \
-    --set nfs.server=192.168.208.1 \
+    --set nfs.server=$CONTROL_PLANE_IP \
     --set nfs.path=/mnt/nfs_share \
     --set storageClass.name=nfs-client \
     --set storageClass.defaultClass=false || true
