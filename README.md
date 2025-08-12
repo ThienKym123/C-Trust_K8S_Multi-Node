@@ -34,7 +34,12 @@ Edit transfer-k3s.sh to transfer [registry.crt](./registry.crt) and [join-comman
 Edit Control plane IP in [setup_worker.sh](./k8s-setup/setup-worker.sh) and copy to locate in fabric-samples/test-network-k8s and run on 3 worker node
 
 ```shell
-./setup-worker.sh init
+./setup-worker.sh worker
+```
+
+> If deploy multi-master k8s cluster
+```shell
+./setup-worker.sh master
 ```
 
 - On Control Plane node:
