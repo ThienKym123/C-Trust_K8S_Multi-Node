@@ -112,7 +112,7 @@ function apply_flannel() {
   kubectl wait --namespace kube-flannel \
     --for=condition=ready pod \
     --selector=app=flannel \
-    --timeout=2m >/dev/null
+    --timeout=3m >/dev/null
   if [ $? -ne 0 ]; then
     log "ERROR: Flannel pods not ready in kube-flannel namespace."
     kubectl get pods -n kube-flannel
@@ -139,6 +139,13 @@ function delete_flannel() {
 function apply_nginx_ingress() {
   push_fn "Launching ${CLUSTER_RUNTIME} ingress controller"
 
+  # Create ingress-nginx namespace first
+  kubectl create namespace ingress-nginx --dry-run=client -o yaml | kubectl apply -f - >/dev/null
+  if [ $? -ne 0 ]; then
+    log "ERROR: Failed to create ingress-nginx namespace."
+    exit 1
+  fi
+
   kubectl apply -f kube/ingress-nginx-k3s.yaml >/dev/null
   if [ $? -ne 0 ]; then
     log "ERROR: Failed to apply NGINX Ingress."
@@ -156,6 +163,9 @@ function delete_nginx_ingress() {
     log "WARNING: Failed to delete NGINX Ingress."
   fi
 
+  # Delete the namespace if it exists
+  kubectl delete namespace ingress-nginx --ignore-not-found >/dev/null
+
   pop_fn
 }
 
@@ -165,7 +175,7 @@ function wait_for_nginx_ingress() {
   kubectl wait --namespace ingress-nginx \
     --for=condition=ready pod \
     --selector=app.kubernetes.io/component=controller \
-    --timeout=2m >/dev/null
+    --timeout=3m >/dev/null
   if [ $? -ne 0 ]; then
     log "ERROR: NGINX Ingress pods not ready."
     exit 1
