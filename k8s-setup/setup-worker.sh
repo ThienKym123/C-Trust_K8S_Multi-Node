@@ -84,6 +84,7 @@ function join_master() {
   sudo cp -f /etc/kubernetes/admin.conf $HOME/.kube/config
   sudo chown $(id -u):$(id -g) $HOME/.kube/config
   chmod 600 $HOME/.kube/config
+<<<<<<< HEAD
 
   # # Untaint only this node
   # NODE_NAME=$(hostname -s)
@@ -91,6 +92,12 @@ function join_master() {
   # kubectl taint nodes $NODE_NAME node.kubernetes.io/not-ready:NoSchedule- || true
   # kubectl taint nodes $NODE_NAME node-role.kubernetes.io/control-plane- || true
 
+=======
+  
+  # Allow control-plane node to run workloads
+  kubectl taint nodes --all node-role.kubernetes.io/control-plane- || true
+  
+>>>>>>> aabbb5ef5003fc2a69a131fa4abd67d5029b7211
   pop_fn "Master node joined"
 }
 

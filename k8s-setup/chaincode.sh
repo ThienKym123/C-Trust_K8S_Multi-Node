@@ -298,9 +298,9 @@ function launch_chaincode_service() {
 
   # Gán node dựa trên peer
   if [ "$peer" == "peer1" ]; then
-    NODE_NAME="admin2"
+    NODE_NAME=$ORG1_NODE
   else
-    NODE_NAME="admin3"
+    NODE_NAME=$ORG2_NODE
   fi
 
   # Thay thế biến trong YAML và áp dụng
