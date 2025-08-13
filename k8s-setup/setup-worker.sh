@@ -10,19 +10,13 @@ LOCAL_REGISTRY_PORT="5000"
 REGISTRY_HOST="$CONTROL_PLANE_IP:$LOCAL_REGISTRY_PORT"
 CERT_DIR="/etc/docker/certs.d/$REGISTRY_HOST"
 REGISTRY_CERT="registry.crt"
-JOIN_SCRIPT="join-cluster.sh"
+WORKER_JOIN_SCRIPT="join-worker.sh"
+MASTER_JOIN_SCRIPT="join-master.sh"
 CONTAINER_CLI="docker"
 
 # ---- Utility functions ----
-function log() {
-  echo "[$(date +%F\ %T)] $@"
-}
-
-function fail() {
-  log "❌ ERROR: $1"
-  exit 1
-}
-
+function log() { echo "[$(date +%F\ %T)] $@"; }
+function fail() { log "❌ ERROR: $1"; exit 1; }
 function push_fn() { log "▶ $1"; }
 function pop_fn() { log "✔ $1"; }
 
@@ -31,26 +25,18 @@ function check_prerequisites() {
   push_fn "Checking prerequisites"
 
   for cmd in $CONTAINER_CLI kubeadm kubelet; do
-    if ! command -v $cmd &>/dev/null; then
-      fail "$cmd not installed. Please install it."
-    fi
+    command -v $cmd &>/dev/null || fail "$cmd not installed"
   done
 
-  local version
-  version=$(kubeadm version -o short | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
-  if [[ "$version" != "$K8S_VERSION" ]]; then
-    fail "kubeadm version $version ≠ required $K8S_VERSION"
-  fi
+  local version=$(kubeadm version -o short | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
+  [[ "$version" == "$K8S_VERSION" ]] || fail "kubeadm version $version ≠ required $K8S_VERSION"
 
-  # Ensure container runtime is running
   sudo systemctl is-active $CONTAINER_CLI &>/dev/null || {
-    log "Container runtime is not running. Starting..."
     sudo systemctl start $CONTAINER_CLI
     sleep 2
     sudo systemctl is-active $CONTAINER_CLI &>/dev/null || fail "$CONTAINER_CLI failed to start"
   }
 
-  # Disable swap
   sudo swapoff -a
   sudo sed -i '/ swap / s/^/#/' /etc/fstab
 
@@ -61,9 +47,7 @@ function check_prerequisites() {
 function install_registry_cert() {
   push_fn "Installing registry certificate"
 
-  if [ ! -f "$REGISTRY_CERT" ]; then
-    fail "Registry cert $REGISTRY_CERT not found. Copy it from control-plane."
-  fi
+  [ -f "$REGISTRY_CERT" ] || fail "Registry cert $REGISTRY_CERT not found"
 
   sudo mkdir -p "$CERT_DIR"
   sudo cp "$REGISTRY_CERT" "$CERT_DIR/ca.crt"
@@ -74,7 +58,6 @@ function install_registry_cert() {
   echo "registry/registry.crt" | sudo tee -a /etc/ca-certificates.conf >/dev/null || true
   sudo update-ca-certificates || fail "Failed to update CA certificates"
 
-  # Restart container runtime
   sudo systemctl restart $CONTAINER_CLI
   sleep 2
   sudo systemctl is-active $CONTAINER_CLI &>/dev/null || fail "$CONTAINER_CLI failed to restart"
@@ -82,33 +65,33 @@ function install_registry_cert() {
   pop_fn "Registry certificate installed"
 }
 
-# ---- Optional: Add Insecure Registry ----
-function configure_insecure_registry() {
-  push_fn "Configuring insecure registry"
-
-  local docker_config="/etc/docker/daemon.json"
-  if [ ! -f "$docker_config" ]; then
-    echo '{ "insecure-registries": ["'"$REGISTRY_HOST"'"] }' | sudo tee "$docker_config" >/dev/null
-  else
-    sudo jq --arg reg "$REGISTRY_HOST" '.["insecure-registries"] += [$reg]' "$docker_config" |
-      sudo tee "$docker_config" >/dev/null
-  fi
-
-  sudo systemctl restart $CONTAINER_CLI
-  sleep 2
-  sudo systemctl is-active $CONTAINER_CLI &>/dev/null || fail "$CONTAINER_CLI failed to restart"
-
-  pop_fn "Insecure registry configured"
+# ---- Join as worker ----
+function join_worker() {
+  push_fn "Joining as worker node"
+  [ -f "$WORKER_JOIN_SCRIPT" ] || fail "$WORKER_JOIN_SCRIPT not found"
+  sudo bash "$WORKER_JOIN_SCRIPT" >/dev/null || fail "Failed to join as worker"
+  pop_fn "Worker node joined"
 }
 
-# ---- Join cluster ----
-function join_cluster() {
-  push_fn "Joining Kubernetes cluster"
+# ---- Join as master ----
+function join_master() {
+  push_fn "Joining as master node"
+  [ -f "$MASTER_JOIN_SCRIPT" ] || fail "$MASTER_JOIN_SCRIPT not found"
+  sudo bash "$MASTER_JOIN_SCRIPT" >/dev/null || fail "Failed to join as master"
+  
+  # Setup kubeconfig for master
+  mkdir -p $HOME/.kube
+  sudo cp -f /etc/kubernetes/admin.conf $HOME/.kube/config
+  sudo chown $(id -u):$(id -g) $HOME/.kube/config
+  chmod 600 $HOME/.kube/config
 
-  [ -f "$JOIN_SCRIPT" ] || fail "$JOIN_SCRIPT not found. Copy it from control-plane."
-  sudo bash "$JOIN_SCRIPT" >/dev/null || fail "Failed to join cluster"
+  # # Untaint only this node
+  # NODE_NAME=$(hostname -s)
+  # log "Removing taints from $NODE_NAME"
+  # kubectl taint nodes $NODE_NAME node.kubernetes.io/not-ready:NoSchedule- || true
+  # kubectl taint nodes $NODE_NAME node-role.kubernetes.io/control-plane- || true
 
-  pop_fn "Cluster joined"
+  pop_fn "Master node joined"
 }
 
 # ---- Clean node ----
@@ -116,10 +99,9 @@ function cluster_clean() {
   push_fn "Resetting node"
 
   sudo kubeadm reset -f
-  sudo rm -rf /etc/kubernetes /var/lib/kubelet $CERT_DIR
-  sudo ip link delete cni0 &>/dev/null || true
-  sudo ip link delete flannel.1 &>/dev/null || true
-  sudo rm -rf /var/lib/cni/ /run/flannel/ /etc/cni/net.d/*
+  sudo rm -rf /etc/kubernetes /var/lib/kubelet /var/lib/etcd /etc/cni/net.d /var/lib/cni
+  sudo ip link delete cni0 2>/dev/null || true
+  sudo ip link delete flannel.1 2>/dev/null || true
 
   pop_fn "Node cleaned"
 }
@@ -139,22 +121,24 @@ function restart_node() {
 }
 
 # ---- Main Command ----
-function cluster_command_group() {
-  local cmd="${1:-init}"
-  shift || true
-
-  case "$cmd" in
-    init)
+function main() {
+  case "$1" in
+    worker)
       check_prerequisites
       install_registry_cert
-      # configure_insecure_registry # Uncomment if registry is HTTP only
-      join_cluster
-      log "🎉 Worker node successfully joined cluster"
+      join_worker
+      log "🎉 Worker node joined cluster"
+      ;;
+    master)
+      check_prerequisites
+      install_registry_cert
+      join_master
+      log "🎉 Master node joined cluster"
       ;;
     clean)
       check_prerequisites
       cluster_clean
-      log "🧹 Worker node cleaned"
+      log "🧹 Node cleaned"
       ;;
     restart)
       check_prerequisites
@@ -162,10 +146,10 @@ function cluster_command_group() {
       log "🔄 Node restarted"
       ;;
     *)
-      log "Usage: $0 [init|clean|restart]"
+      log "Usage: $0 [worker|master|clean|restart]"
       exit 1
       ;;
   esac
 }
 
-cluster_command_group "$@"
+main "$@"

@@ -149,8 +149,8 @@ sudo systemctl restart nfs-kernel-server
 - Trên các workder node
 ```shell
 sudo apt-get install nfs-common -y
-sudo mkdir -p /mnt/nfs_clientshare
-sudo mount 192.168.208.1:/mnt/nfs_share /mnt/nfs_clientshare
+sudo mkdir -p /mnt/nfs_client
+sudo mount 192.168.208.1:/mnt/nfs_share /mnt/nfs_client
 ```
 
 ## Cài đặt MinIO: Trên 1 máy riêng biệt (192.168.208.148)

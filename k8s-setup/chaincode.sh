@@ -262,8 +262,6 @@ function package_ccaas_chaincode() {
 
   mkdir -p ${cc_folder}
 
-  # Allow the user to override the service URL for the endpoint.  This allows, for instance,
-  # local debugging at the 'host.docker.internal' DNS alias.
   local cc_default_address="{{.peername}}-ccaas-${cc_name}:9999"
   local cc_address=${TEST_NETWORK_CHAINCODE_ADDRESS:-$cc_default_address}
 
@@ -328,6 +326,8 @@ function launch_chaincode() {
   launch_chaincode_service org1 peer1 ${cc_name} ${cc_id} ${cc_image}
   launch_chaincode_service org1 peer2 ${cc_name} ${cc_id} ${cc_image}
   # Launch chaincode services for org2
+  sleep 3
+
   launch_chaincode_service org2 peer1 ${cc_name} ${cc_id} ${cc_image}
   launch_chaincode_service org2 peer2 ${cc_name} ${cc_id} ${cc_image}
 }

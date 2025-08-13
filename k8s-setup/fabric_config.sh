@@ -33,18 +33,14 @@ function delete_namespace() {
 function init_storage_volumes() {
   push_fn "Provisioning volume storage using NFS Provisioner"
 
-  # Create namespace for NFS Provisioner (if not exists)
-  kubectl create namespace nfs-provisioner || true
-
   # Install NFS Subdir External Provisioner
-  helm repo add nfs-subdir-external-provisioner https://kubernetes-sigs.github.io/nfs-subdir-external-provisioner/ || true
   helm upgrade --install nfs-subdir-external-provisioner nfs-subdir-external-provisioner/nfs-subdir-external-provisioner \
-    --namespace nfs-provisioner \
-    --set nfs.server=$CONTROL_PLANE_IP \
-    --set nfs.path=/mnt/nfs_share \
-    --set storageClass.name=nfs-client \
-    --set storageClass.defaultClass=false || true
-
+  --namespace nfs-provisioner --create-namespace \
+  --set nfs.server=192.168.208.1 \
+  --set nfs.path=/mnt/nfs_share \
+  --set storageClass.name=nfs-client \
+  --set storageClass.defaultClass=false
+  
   # Apply PVCs for each organization
   kubectl -n $ORG0_NS apply -f kube/org0/fabric-org0-pvc.yaml || true
   kubectl -n $ORG1_NS apply -f kube/org1/fabric-org1-pvc.yaml || true

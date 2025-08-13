@@ -5,9 +5,15 @@ metadata:
   namespace: ${KUBE_NAMESPACE}
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: /
-    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    cert-manager.io/cluster-issuer: letsencrypt-prod
 spec:
   ingressClassName: nginx
+  tls:
+    - hosts:
+        - explorer.${DOMAIN}
+      secretName: explorer-tls
   rules:
     - host: explorer.${DOMAIN}
       http:
