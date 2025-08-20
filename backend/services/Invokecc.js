@@ -70,6 +70,12 @@ async function Invokecc(fcn,params,user){
     {
       var name = user;
       await contract.submitTransaction(fcn, JSON.stringify(params),name);
+    }else if (fcn === "ThanhToanSanPham") {
+      const { data, uuid } = params;
+      if (!data || !uuid) {
+        throw new Error("Missing data or uuid parameter");
+      }
+      await contract.submitTransaction(fcn, data, uuid); // Truyen data la mang JSON string
     }else{
       console.log("=== CHAINCODE EXECUTION DEBUG ===");
       console.log("Submitting transaction with params:", JSON.stringify(params));

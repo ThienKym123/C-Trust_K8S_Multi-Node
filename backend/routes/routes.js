@@ -109,6 +109,7 @@ module.exports = function(app, passport) {
 
     app.post('/contract/tranfer', passport.authenticate('org1', { session: false }), ccctrl.transfer);
 
+    app.post('/contract/thanhToan', passport.authenticate('org1', { session: false }), ccctrl.thanhToanSanPham);
 
   
     app.get('/contract/get', passport.authenticate('org1', { session: false }), ccctrl.getById);
@@ -122,14 +123,15 @@ module.exports = function(app, passport) {
     app.get('/contract/searchSanPham', passport.authenticate('org1', { session: false }), ccctrl.searchSanPham);
 
     app.get('/contract/history', passport.authenticate('org1', { session: false }), ccctrl.getHistoryById);
-
+    
     app.get('/contract/history/complete', passport.authenticate('org1', { session: false }), ccctrl.getHistoryByMaDongGoi);
+
+    app.get('/contract/doanhThu', passport.authenticate('org1', { session: false }), ccctrl.getDoanhThuSanPham);
 
     app.post('/offchain/uploadDescriptions', uploaddes.fields([{ name: 'descriptions', maxCount: 1 }, { name: 'thumbnail', maxCount: 1 }]), ccctrl.uploadDescriptions);
 
     // app.get('/qscc/getBlockbyNum',passport.authenticate('org1', { session: false }),ccctrl.getBlockbyNum);
 
     // app.get('/qscc/getBlockbyTxid', passport.authenticate('org1', { session: false }), ccctrl.getBlockByTxID);
-
 
 }

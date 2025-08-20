@@ -100,7 +100,7 @@ function push_docker_images() {
 function apply_flannel() {
   push_fn "Applying Flannel CNI"
 
-  kubectl apply -f https://raw.githubusercontent.com/flannel-io/flannel/master/Documentation/kube-flannel.yml >/dev/null
+  kubectl apply -f https://github.com/flannel-io/flannel/releases/latest/download/kube-flannel.yml >/dev/null
   if [ $? -ne 0 ]; then
     log "ERROR: Failed to apply Flannel CNI."
     exit 1
@@ -125,7 +125,7 @@ function apply_flannel() {
 function delete_flannel() {
   push_fn "Deleting Flannel CNI"
 
-  kubectl delete -f https://raw.githubusercontent.com/flannel-io/flannel/master/Documentation/kube-flannel.yml >/dev/null
+  kubectl delete -f https://github.com/flannel-io/flannel/releases/latest/download/kube-flannel.yml >/dev/null
   if [ $? -ne 0 ]; then
     log "WARNING: Failed to delete Flannel CNI."
   fi

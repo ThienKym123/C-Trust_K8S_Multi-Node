@@ -251,7 +251,48 @@ exports.transfer = async function(req, res, next){
   }
 }
 
+// thanhToanSanPham: Handler tiep nhan tac vu thanh toan san pham
+// Input:
+// data: Mang chua thong tin san pham (id, nhasanxuat, soluong, v.v.)
+// uuid: Ma dinh danh giao dich thanh toan
+// Output:
+// success: Trang thai thuc hien
+// message: Thong tin ket qua hoac loi
+exports.thanhToanSanPham = async function (req, res, next) {
+  try {
+    logger.info('Running thanhToanSanPham controller');
+    const user = req.user.local.username;
+    const fcn = 'ThanhToanSanPham';
 
+    if (!user) {
+      return res.status(401).send(getErrorMessage('user'));
+    }
+
+    const data = req.body.data; 
+    const uuid = req.body.uuid;
+
+    if (!data || !Array.isArray(data) || !uuid) {
+      return res.status(400).send(getErrorMessage('data or uuid'));
+    }
+
+    const message = await invokesvc.Invokecc(fcn, { data: JSON.stringify(data), uuid }, user);
+
+    if (!message.success) {
+      return res.status(400).send(message);
+    }
+
+    return res.status(200).send({
+      success: true,
+      message: 'Thanh toan san pham thanh cong',
+    });
+  } catch (err) {
+    console.error('Error in /contract/thanhToanSanPham:', err);
+    return res.status(500).send({
+      success: false,
+      message: err && err.message ? err.message : err.toString(),
+    });
+  }
+};
 
 //getById: Handler tiep nhan tac vu truy van thong tin san pham
 //      Input: 
@@ -697,6 +738,52 @@ exports.searchSanPham = async function(req, res){
     });
   }
 }
+
+// getDoanhThuSanPham: Handler tiep nhan tac vu truy van thong tin thanh toan/doanh thu san pham
+// Input:
+// key: Ma dong goi cua san pham
+// Output:
+// success: Trang thai thuc hien
+// message: Thong tin doanh thu san pham duoc trich xuat tu so cai
+exports.getDoanhThuSanPham = async function (req, res) {
+  try {
+    logger.info('Running getDoanhThuSanPham controller');
+    const user = req.user.local.username;
+    const fcn = 'QueryDoanhThuSanPham';
+
+    if (!user) {
+      return res.status(401).send(getErrorMessage('user'));
+    }
+
+    const key = req.query.key; 
+    if (!key) {
+      return res.status(400).send(getErrorMessage('key'));
+    }
+
+    const args = {
+      key: key
+    };
+
+    const message = await querysvc.Querycc(fcn, args, user);
+
+    if (!message.success) {
+      return res.status(404).send(message);
+    }
+
+    return res.status(200).send({
+      success: true,
+      message: message.message
+    });
+  } catch (err) {
+    console.error('Error in /contract/getDoanhThuSanPham:', err);
+    return res.status(500).send({
+      success: false,
+      message: err && err.message ? err.message : err.toString(),
+    });
+  }
+};
+
+
 //getBlockByTxID deprecated
 exports.getBlockByTxID = async function(req, res){
   try{
